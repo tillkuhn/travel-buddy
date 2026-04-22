@@ -10,8 +10,13 @@ A minimal [Embabel](https://embabel.com) agent demo running against a local LLM 
 
 Start ramalama:
 ```bash
-ramalama serve library/llama3.2
+$ ramalama serve llama3.2 --port 11434 --name llama --max-tokens=123456 --thinking=False
+0.19: Pulling from ramalama/ramalama
+Digest: sha256:3b67a6d82d1412b246036009a8d35a450ce75983f66aeb4dadb7d058179958e2
+Status: Image is up to date for quay.io/ramalama/ramalama:0.19
 ```
+
+CAUTION: model is named `library/llama3.2` and needs lots of memory to start 16-20GB
 
 ## Running
 
