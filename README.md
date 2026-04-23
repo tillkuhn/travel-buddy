@@ -2,6 +2,7 @@
 
 An [Embabel](https://embabel.com) agent demo that suggests travel destinations based on user preferences, running against a local LLM via [ramalama](https://github.com/containers/ramalama).
 
+> [Embabel](https://github.com/embabel/embabel-agent) (Em-BAY-bel) is a framework for authoring agentic flows on the JVM that seamlessly mix LLM-prompted interactions with code and domain models. Supports intelligent path finding towards goals. Written in Kotlin but offers a natural usage model from Java. From the creator of Spring.
 ## Prerequisites
 
 - Java 21+
