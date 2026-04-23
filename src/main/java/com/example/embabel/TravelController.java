@@ -23,7 +23,7 @@ public class TravelController {
     @GetMapping("/")
     public String form(Model model) {
         model.addAttribute("activities", List.of(
-                "Hiking", "Skiing", "Diving", "Beachtime", "Culture", "Shopping", "Cycling"
+                "Beaches", "Culture", "Cycling", "Diving", "Hiking", "Shopping", "Skiing", "Wildlife"
         ));
         return "index";
     }
@@ -54,6 +54,7 @@ public class TravelController {
                 .invoke(new UserInput(prompt));
 
         model.addAttribute("suggestion", suggestion);
+        model.addAttribute("prompt", prompt);
         model.addAttribute("region", region);
         model.addAttribute("activities", activities == null ? List.of() : activities);
         model.addAttribute("additionalWishes", additionalWishes);

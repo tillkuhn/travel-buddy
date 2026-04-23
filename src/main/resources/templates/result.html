@@ -4,30 +4,277 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Travel Recommendation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
-        h1 { font-size: 1.8rem; margin-bottom: 4px; }
-        .card { background: #f0f9ff; border-left: 4px solid #2563eb; border-radius: 6px; padding: 20px 24px; margin: 24px 0; }
-        .card p { margin: 0; line-height: 1.7; white-space: pre-wrap; }
-        .meta { color: #555; font-size: 0.9rem; margin-bottom: 20px; }
-        .meta span { background: #e5e7eb; border-radius: 4px; padding: 2px 8px; margin-right: 6px; }
-        a { display: inline-block; margin-top: 20px; color: #2563eb; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background:
+                linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)),
+                url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1600&q=80') center/cover no-repeat fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 48px 44px;
+            max-width: 620px;
+            width: 100%;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .header-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.9rem;
+            color: #1a1a2e;
+            line-height: 1.2;
+        }
+
+        .tagline {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin: 6px 0 24px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 28px;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        .tag.region {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+        }
+
+        .tag.wishes {
+            background: #f0fdf4;
+            color: #15803d;
+            border-color: #bbf7d0;
+        }
+
+        .suggestion-box {
+            background: linear-gradient(135deg, #fff7ed 0%, #fff1e6 100%);
+            border: 1.5px solid #fed7aa;
+            border-left: 5px solid #f97316;
+            border-radius: 12px;
+            padding: 28px 28px;
+            margin-bottom: 32px;
+            position: relative;
+        }
+
+        .suggestion-box::before {
+            content: '\201C';
+            font-family: 'Playfair Display', serif;
+            font-size: 5rem;
+            color: #fed7aa;
+            position: absolute;
+            top: -10px;
+            left: 16px;
+            line-height: 1;
+        }
+
+        .suggestion-text {
+            color: #1e293b;
+            font-size: 0.975rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            padding-top: 12px;
+        }
+
+        .divider {
+            height: 1px;
+            background: #f1f5f9;
+            margin: 0 0 24px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            color: #f97316;
+            border: 2px solid #f97316;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s, color 0.2s, transform 0.1s;
+        }
+
+        .back-btn:hover {
+            background: #fff7ed;
+            transform: translateY(-1px);
+        }
+
+        .show-prompt-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            color: #64748b;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.1s;
+        }
+
+        .show-prompt-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+        }
+
+        .prompt-box {
+            display: none;
+            margin-top: 24px;
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px 24px;
+        }
+
+        .prompt-box.visible {
+            display: block;
+        }
+
+        .prompt-label {
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .prompt-text {
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            margin: 0;
+        }
+
+        .try-again-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f97316;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .try-again-btn:hover {
+            background: #ea6c0a;
+            transform: translateY(-1px);
+        }
+
     </style>
+    <th:block th:replace="~{fragments :: loading-styles}"></th:block>
 </head>
 <body>
-    <h1>Your Travel Recommendation</h1>
-
-    <div class="meta">
-        <span th:text="${region}"></span>
-        <span th:each="activity : ${activities}" th:text="${activity}"></span>
-        <span th:if="${!#strings.isEmpty(additionalWishes)}" th:text="'+ ' + ${additionalWishes}"></span>
-    </div>
-
     <div class="card">
-        <p th:text="${suggestion}"></p>
-    </div>
+        <div class="header">
+            <span class="header-icon">&#x1F5FA;&#xFE0F;</span>
+            <h1>Your Destination</h1>
+        </div>
+        <p class="tagline">Here's what our AI travel guide recommends for you</p>
 
-    <a href="/">&#8592; Plan another trip</a>
+        <div class="tags">
+            <span class="tag region">&#127757; <span th:text="${region}"></span></span>
+            <span class="tag" th:each="activity : ${activities}">&#10003; <span th:text="${activity}"></span></span>
+            <span class="tag wishes" th:if="${!#strings.isEmpty(additionalWishes)}">&#x2728; <span th:text="${additionalWishes}"></span></span>
+        </div>
+
+        <div class="suggestion-box">
+            <p class="suggestion-text" th:text="${suggestion}"></p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="actions">
+            <a class="back-btn" href="/">&#8592; Plan another trip</a>
+
+            <form method="post" action="/plan" style="margin:0">
+                <input type="hidden" name="region" th:value="${region}">
+                <input type="hidden" th:each="activity : ${activities}" name="activities" th:value="${activity}">
+                <input type="hidden" name="additionalWishes" th:value="${additionalWishes}">
+                <button type="submit" class="try-again-btn">&#x1F504; Try again</button>
+            </form>
+
+            <button type="button" class="show-prompt-btn" onclick="togglePrompt(this)">&#x1F50D; Show prompt</button>
+        </div>
+
+        <div class="prompt-box" id="promptBox">
+            <div class="prompt-label">Prompt sent to LLM</div>
+            <pre class="prompt-text" th:text="${prompt}"></pre>
+        </div>
+    </div>
+    <th:block th:replace="~{fragments :: loading-overlay}"></th:block>
+
+    <script>
+        function togglePrompt(btn) {
+            const box = document.getElementById('promptBox');
+            const visible = box.classList.toggle('visible');
+            btn.textContent = visible ? '🔍 Hide prompt' : '🔍 Show prompt';
+        }
+    </script>
+    <th:block th:replace="~{fragments :: loading-script}"></th:block>
 </body>
 </html>

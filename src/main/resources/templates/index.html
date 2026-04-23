@@ -4,41 +4,216 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Travel Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
-        h1 { font-size: 1.8rem; margin-bottom: 4px; }
-        p.subtitle { color: #666; margin-top: 0; margin-bottom: 24px; }
-        label { display: block; font-weight: 600; margin: 16px 0 6px; }
-        select, textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
-        select[multiple] { height: 160px; }
-        textarea { height: 80px; resize: vertical; }
-        small { color: #888; font-size: 0.85rem; }
-        button { margin-top: 20px; padding: 10px 28px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
-        button:hover { background: #1d4ed8; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background:
+                linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)),
+                url('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&q=80') center/cover no-repeat fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 48px 44px;
+            max-width: 560px;
+            width: 100%;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: #1a1a2e;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin: 8px 0 32px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #374151;
+            margin-bottom: 8px;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        label .hint {
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+            color: #9ca3af;
+            font-size: 0.8rem;
+        }
+
+        select, textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            background: #f8fafc;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+            background: #fff;
+        }
+
+        select:not([multiple]) {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+            cursor: pointer;
+        }
+
+        select[multiple] {
+            height: 148px;
+            padding: 8px;
+        }
+
+        select[multiple] option {
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 2px;
+        }
+
+        select[multiple] option:checked {
+            background: linear-gradient(#f97316, #f97316);
+            color: white;
+        }
+
+        textarea {
+            height: 88px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        textarea::placeholder { color: #cbd5e1; }
+
+        .divider {
+            height: 1px;
+            background: #f1f5f9;
+            margin: 28px 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 16px rgba(249,115,22,0.35);
+            letter-spacing: 0.01em;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(249,115,22,0.45);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
     </style>
+    <th:block th:replace="~{fragments :: loading-styles}"></th:block>
 </head>
 <body>
-    <h1>AI Travel Planner</h1>
-    <p class="subtitle">Tell us what you're looking for and we'll suggest the perfect destination.</p>
+    <div class="card">
+        <div class="logo">
+            <span class="logo-icon">&#x2708;&#xFE0F;</span>
+            <h1>AI Travel Planner</h1>
+        </div>
+        <p class="subtitle">Tell us what excites you and we'll find your perfect next destination.</p>
 
-    <form action="/plan" method="post">
-        <label for="region">Region</label>
-        <select id="region" name="region" required>
-            <option value="" disabled selected>Select a region…</option>
-            <option value="Americas">Americas</option>
-            <option value="Southeast Asia">Southeast Asia</option>
-            <option value="Europe">Europe</option>
-        </select>
+        <form action="/plan" method="post">
+            <div class="form-group">
+                <label for="region">Destination Region</label>
+                <select id="region" name="region" required>
+                    <option value="" disabled selected>Where in the world? ...</option>
+                    <option value="Americas">&#127758; Americas</option>
+                    <option value="Southeast Asia">&#127759; Southeast Asia</option>
+                    <option value="Europe">&#127757; Europe</option>
+                </select>
+            </div>
 
-        <label for="activities">Activities <small>(hold Ctrl / Cmd to select multiple)</small></label>
-        <select id="activities" name="activities" multiple>
-            <option th:each="activity : ${activities}" th:value="${activity}" th:text="${activity}"></option>
-        </select>
+            <div class="form-group">
+                <label for="activities">Activities <span class="hint">(hold Ctrl / Cmd for multiple)</span></label>
+                <select id="activities" name="activities" multiple>
+                    <option th:each="activity : ${activities}" th:value="${activity}" th:text="${activity}"></option>
+                </select>
+            </div>
 
-        <label for="additionalWishes">Additional Wishes</label>
-        <textarea id="additionalWishes" name="additionalWishes" placeholder="E.g. family-friendly, budget travel, off the beaten path…"></textarea>
+            <div class="form-group">
+                <label for="additionalWishes">Your Wishes</label>
+                <textarea id="additionalWishes" name="additionalWishes"
+                          placeholder="E.g. family-friendly, budget travel, off the beaten path, romantic getaway…"></textarea>
+            </div>
 
-        <button type="submit">Find My Destination</button>
-    </form>
+            <div class="divider"></div>
+
+            <button type="submit">Find My Destination &rarr;</button>
+        </form>
+
+        <p class="footer-note">Powered by AI &mdash; recommendations are suggestions, not guarantees.</p>
+    </div>
+
+    <th:block th:replace="~{fragments :: loading-overlay}"></th:block>
+    <th:block th:replace="~{fragments :: loading-script}"></th:block>
 </body>
 </html>

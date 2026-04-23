@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+
+<!-- Loading overlay CSS -->
+<th:block th:fragment="loading-styles">
+    <style>
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.visible {
+            display: flex;
+        }
+
+        .loading-card {
+            background: rgba(255,255,255,0.97);
+            border-radius: 20px;
+            padding: 40px 48px;
+            text-align: center;
+            max-width: 340px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+        }
+
+        .loading-globe {
+            font-size: 3.5rem;
+            display: block;
+            animation: spin 2s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .loading-msg {
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            min-height: 2.8em;
+        }
+    </style>
+</th:block>
+
+<!-- Loading overlay markup -->
+<th:block th:fragment="loading-overlay">
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-card">
+            <span class="loading-globe">&#x1F30D;</span>
+            <div class="loading-title">Consulting the AI oracle…</div>
+            <div class="loading-msg" id="loadingMsg"></div>
+        </div>
+    </div>
+</th:block>
+
+<!-- Loading overlay JS (attach to the page's first <form>) -->
+<th:block th:fragment="loading-script">
+    <script>
+        const messages = [
+            "Bribing airport staff for insider tips…",
+            "Arguing with a pigeon about the best beaches…",
+            "Googling 'is it always this hot there?'…",
+            "Convincing the AI to pick somewhere with good Wi-Fi…",
+            "Checking if your suitcase fits in the overhead bin…",
+            "Scanning TripAdvisor reviews written in ALL CAPS…",
+            "Negotiating a better exchange rate with a seagull…",
+            "Asking a local who definitely doesn't speak English…",
+            "Rerouting through three layovers to save $12…",
+            "Consulting ancient travel scrolls (Stack Overflow)…",
+        ];
+
+        let msgIndex = 0;
+
+        document.querySelector('form').addEventListener('submit', function () {
+            const overlay = document.getElementById('loadingOverlay');
+            const msgEl   = document.getElementById('loadingMsg');
+
+            msgEl.textContent = messages[0];
+            overlay.classList.add('visible');
+
+            setInterval(function () {
+                msgIndex = (msgIndex + 1) % messages.length;
+                msgEl.textContent = messages[msgIndex];
+            }, 2500);
+        });
+    </script>
+</th:block>
+
+</body>
+</html>
