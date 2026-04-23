@@ -1,42 +1,38 @@
-# Embabel Ollama Demo
+# Embabel Travel Planner
 
-A minimal [Embabel](https://embabel.com) agent demo running against a local LLM via [ramalama](https://github.com/containers/ramalama).
+An [Embabel](https://embabel.com) agent demo that suggests travel destinations based on user preferences, running against a local LLM via [ramalama](https://github.com/containers/ramalama).
 
 ## Prerequisites
 
-- Java 21
+- Java 21+
 - Maven
 - ramalama running locally with a compatible model (e.g. `llama3.2`)
 
 Start ramalama:
 ```bash
-$ ramalama serve llama3.2 --port 11434 --name llama --max-tokens=123456 --thinking=False
-0.19: Pulling from ramalama/ramalama
-Digest: sha256:3b67a6d82d1412b246036009a8d35a450ce75983f66aeb4dadb7d058179958e2
-Status: Image is up to date for quay.io/ramalama/ramalama:0.19
+ramalama serve llama3.2 --port 11434 --name llama --max-tokens=123456 --thinking=False
 ```
 
-CAUTION: model is named `library/llama3.2` and needs lots of memory to start 16-20GB
+> **Note:** `llama3.2` is registered as `library/llama3.2` and requires 16–20 GB of memory.
+> For a lighter alternative (~1 GB): `ramalama serve tinyllama --port 11434 --name llama --max-tokens=56789 --thinking=False`
 
 ## Running
 
 ```bash
-# Interactive Spring Shell
 mvn spring-boot:run
-
-# Non-interactive: run a single command and exit
-mvn spring-boot:run -Dspring-boot.run.arguments="joke"
-mvn spring-boot:run -Dspring-boot.run.arguments="joke --topic cats"
 ```
+
+Then open [http://localhost:8080](http://localhost:8080) in your browser.
 
 ## What it does
 
-The `joke` shell command invokes a two-step Embabel agent pipeline:
+Fill out the form with your travel preferences:
 
-1. **generateJoke** — asks the LLM to produce a joke (setup + punchline) about a topic as structured JSON
-2. **explainJoke** — asks the LLM to explain why the joke is funny
+- **Region** — Americas, Southeast Asia, or Europe
+- **Activities** — Hiking, Skiing, Diving, Beachtime, Culture, Shopping, Cycling (multi-select)
+- **Additional Wishes** — any free-text notes (e.g. "family-friendly", "budget travel")
 
-The default topic is `software developers`.
+On submit, the app builds a prompt from your selections and invokes a single-step Embabel agent (`TravelPlannerAgent`) which asks the LLM for a concrete destination recommendation. The result is displayed on the next page.
 
 ## Configuration
 
@@ -53,4 +49,3 @@ To switch models, update `embabel.models.default-llm` in `application.properties
 ## Note on ramalama vs Ollama
 
 Despite the endpoint being `localhost:11434`, this app uses ramalama which speaks the **OpenAI wire protocol** — not the native Ollama protocol. The Embabel OpenAI starter (`embabel-agent-starter-openai`) is used accordingly.
-

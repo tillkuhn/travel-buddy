@@ -8,12 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build
 mvn package
 
-# Run (interactive Spring Shell)
+# Run (starts web server on http://localhost:8080)
 mvn spring-boot:run
-
-# Run a shell command non-interactively (e.g. invoke the joke agent)
-mvn spring-boot:run -Dspring-boot.run.arguments="joke"
-mvn spring-boot:run -Dspring-boot.run.arguments="joke --topic cats"
 ```
 
 There are no tests yet (`src/test/java` is empty).
@@ -39,15 +35,19 @@ embabel.models.default-llm=library/llama3.2
 
 ## Architecture
 
-The app is a minimal **Embabel agent** demo with a Spring Shell interface:
+The app is an **Embabel agent** travel planner with a Thymeleaf web UI:
 
 - `EmbabelDemoApplication` — standard Spring Boot entry point
-- `DemoShell` — `@ShellComponent` exposing the `joke [topic]` command; delegates to `AgentPlatform`
-- `agents/JokeAgent` — `@Agent` with two `@Action` methods forming a pipeline:
-  1. `generateJoke(UserInput)` → calls LLM to produce a `Joke(setup, punchline)` record as structured JSON
-  2. `explainJoke(Joke)` → `@AchievesGoal`, calls LLM to explain why the joke is funny; returns final `String`
+- `TravelController` — Spring MVC `@Controller` serving the form (`GET /`) and handling submissions (`POST /plan`); builds the LLM prompt from user inputs and invokes `AgentPlatform`
+- `agents/TravelPlannerAgent` — `@Agent` with a single `@Action`/`@AchievesGoal` method that takes a `UserInput` prompt and returns a destination suggestion as a `String`
 
-Embabel automatically chains the two actions: the output of `generateJoke` is injected as input to `explainJoke` because the types match.
+### Web UI (Thymeleaf templates)
+
+- `templates/index.html` — input form with:
+  - Region select box (Americas / Southeast Asia / Europe)
+  - Multi-select for activities (Hiking, Skiing, Diving, Beachtime, Culture, Shopping, Cycling)
+  - Free-text field for additional wishes
+- `templates/result.html` — displays the LLM suggestion with the selected inputs echoed back
 
 ## Logging personality
 

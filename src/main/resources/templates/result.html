@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Travel Recommendation</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
+        h1 { font-size: 1.8rem; margin-bottom: 4px; }
+        .card { background: #f0f9ff; border-left: 4px solid #2563eb; border-radius: 6px; padding: 20px 24px; margin: 24px 0; }
+        .card p { margin: 0; line-height: 1.7; white-space: pre-wrap; }
+        .meta { color: #555; font-size: 0.9rem; margin-bottom: 20px; }
+        .meta span { background: #e5e7eb; border-radius: 4px; padding: 2px 8px; margin-right: 6px; }
+        a { display: inline-block; margin-top: 20px; color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Your Travel Recommendation</h1>
+
+    <div class="meta">
+        <span th:text="${region}"></span>
+        <span th:each="activity : ${activities}" th:text="${activity}"></span>
+        <span th:if="${!#strings.isEmpty(additionalWishes)}" th:text="'+ ' + ${additionalWishes}"></span>
+    </div>
+
+    <div class="card">
+        <p th:text="${suggestion}"></p>
+    </div>
+
+    <a href="/">&#8592; Plan another trip</a>
+</body>
+</html>

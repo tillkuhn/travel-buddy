@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Travel Planner</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
+        h1 { font-size: 1.8rem; margin-bottom: 4px; }
+        p.subtitle { color: #666; margin-top: 0; margin-bottom: 24px; }
+        label { display: block; font-weight: 600; margin: 16px 0 6px; }
+        select, textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
+        select[multiple] { height: 160px; }
+        textarea { height: 80px; resize: vertical; }
+        small { color: #888; font-size: 0.85rem; }
+        button { margin-top: 20px; padding: 10px 28px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+    </style>
+</head>
+<body>
+    <h1>AI Travel Planner</h1>
+    <p class="subtitle">Tell us what you're looking for and we'll suggest the perfect destination.</p>
+
+    <form action="/plan" method="post">
+        <label for="region">Region</label>
+        <select id="region" name="region" required>
+            <option value="" disabled selected>Select a region…</option>
+            <option value="Americas">Americas</option>
+            <option value="Southeast Asia">Southeast Asia</option>
+            <option value="Europe">Europe</option>
+        </select>
+
+        <label for="activities">Activities <small>(hold Ctrl / Cmd to select multiple)</small></label>
+        <select id="activities" name="activities" multiple>
+            <option th:each="activity : ${activities}" th:value="${activity}" th:text="${activity}"></option>
+        </select>
+
+        <label for="additionalWishes">Additional Wishes</label>
+        <textarea id="additionalWishes" name="additionalWishes" placeholder="E.g. family-friendly, budget travel, off the beaten path…"></textarea>
+
+        <button type="submit">Find My Destination</button>
+    </form>
+</body>
+</html>
