@@ -53,3 +53,4 @@ To switch models, update `embabel.models.default-llm` in `application.properties
 ## Note on ramalama vs Ollama
 
 Despite the endpoint being `localhost:11434`, this app uses ramalama which speaks the **OpenAI wire protocol** — not the native Ollama protocol. The Embabel OpenAI starter (`embabel-agent-starter-openai`) is used accordingly.
+
