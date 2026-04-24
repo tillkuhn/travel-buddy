@@ -1,4 +1,4 @@
-package com.example.embabel;
+package net.timafe.travel;
 
 import java.util.List;
 

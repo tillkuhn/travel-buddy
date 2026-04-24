@@ -1,4 +1,4 @@
-package com.example.embabel.agents;
+package net.timafe.travel.agents;
 
 import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;

@@ -1,4 +1,4 @@
-package com.example.embabel;
+package net.timafe.travel;
 
 import com.embabel.agent.api.invocation.AgentInvocation;
 import com.embabel.agent.core.AgentPlatform;
@@ -24,11 +24,11 @@ public class TravelService {
         String prompt = """
                 You are an expert travel consultant. Based on the following traveler preferences, suggest ONE specific travel destination and explain in 3-5 sentences why it is a great fit.
                 If you don't know, say you don't know. Do not guess!
-
+                
                 Region preference: %s
                 Desired activities: %s
                 Additional wishes: %s
-
+                
                 Provide a concrete destination name and a compelling, personalized recommendation.
                 """.formatted(request.region(), activitiesList,
                 request.additionalWishes().isBlank() ? "none" : request.additionalWishes()).trim();

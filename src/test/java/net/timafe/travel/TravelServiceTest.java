@@ -1,4 +1,4 @@
-package com.example.embabel;
+package net.timafe.travel;
 
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest;
 import org.junit.jupiter.api.Test;
