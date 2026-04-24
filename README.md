@@ -1,4 +1,4 @@
-# Embabel Travel Buddy
+# 🗺️ Embabel Travel Buddy
 
 An [Embabel](https://embabel.com) agent demo in top of [spring-boot](https://spring.io/projects/spring-boot) that suggests travel destinations based on user preferences, running against a local LLM served by [RamaLama](https://github.com/containers/ramalama).
 
