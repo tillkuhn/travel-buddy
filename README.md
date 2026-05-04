@@ -15,19 +15,32 @@ An [Embabel](https://embabel.com) agent demo in top of [spring-boot](https://spr
 - Maven
 - RamaLama running locally with a compatible model (e.g. `tinyllama`,`llama3.2`)
 
-Install / start ramalama:
+Install ramalama with brew
 ```bash
 $ brew info ramalama
 ==> ramalama ✔: stable 0.19.0 (bottled)
 Goal of RamaLama is to make working with AI boring
 (...)
 ```
+
+Run a particular model with ramalama
 ```bash
 $ ramalama serve tinyllama --port 11434 --name llama --max-tokens=2000 --thinking=False
 0.19: Pulling from ramalama/ramalama
 Status: Image is up to date for quay.io/ramalama/ramalama:0.19
 (...)
 main: server is listening on http://0.0.0.0:11434
+srv  log_server_r: done request: POST /v1/chat/completions ::ffff:172.17.0.1 200
+```
+
+Example docker command invoked by ramalama behind the scenes
+``` bash
+docker run --rm --label ai.ramalama.model=ollama://library/granite3.1-dense:2b --label ai.ramalama.engine=docker \
+  --label ai.ramalama.runtime=llama.cpp --label ai.ramalama.port=11434 --label ai.ramalama.command=serve \
+  --security-opt=label=disable --cap-drop=all --security-opt=no-new-privileges --pull always -p 11434:11434 \
+  --label ai.ramalama --name ramalama --env=HOME=/tmp --init quay.io/ramalama/ramalama:0.20 llama-server ˚
+  --host :: --port 11434 --model /path/to/model --no-warmup --reasoning-budget 0 ˚
+  --alias library/granite3.1-dense --temp 0.8 --cache-reuse 256
 ```
 
 ## Does Model <insert-fancy-LLM-here> run on my hardware?
@@ -49,7 +62,12 @@ Find what models run on your hardware
 ## Running the app
 
 ```bash
-mvn spring-boot:run
+$ mvn spring-boot:run
+```
+```bash
+Powered by Spring Boot 3.5.13
+12:30:52.169 [main] INFO  TravelApplication - Starting TravelApplication using Java 25.0.2 with PID 69558 2:30:52.170 [main] INFO  TravelApplication - No active profile set, falling back to 1 default profile: "default"
+12:30:52.498 [main] INFO  OnMcpConnectionCondition - MCP connection condition NOT matched for [brave-search-mcp, fetch-mcp, wikipedia-mcp, docker-mcp] (...)
 ```
 
 Then open [http://localhost:8080](http://localhost:8080) in your browser.
@@ -63,6 +81,47 @@ Fill out the form with your travel preferences:
 - **Additional Wishes** — any free-text notes (e.g. "family-friendly", "budget travel")
 
 On submit, the app builds a prompt from your selections and invokes a single-step Embabel agent (`TravelPlannerAgent`) which asks the LLM for a concrete destination recommendation. The result is displayed on the next page.
+
+## Example Service with Agent Invocation
+
+```Java
+// TravelService.java
+@Service
+public class TravelService {
+
+    private final AgentPlatform agentPlatform;
+
+    public TravelService(AgentPlatform agentPlatform) {
+        this.agentPlatform = agentPlatform;
+    }
+
+    public TravelResult plan(TravelRequest request) {
+        String activitiesList = (request.activities() == null || request.activities().isEmpty())
+                ? "no specific activities"
+                : String.join(", ", request.activities());
+
+        String prompt = """
+                You are an expert travel consultant. Based on the following traveler preferences, suggest ONE specific travel destination and explain in 3-5 sentences why it is a great fit.
+                If you don't know, say you don't know. Do not guess!
+                
+                Region preference: %s
+                Desired activities: %s
+                Additional wishes: %s
+                
+                Provide a concrete destination name and a compelling, personalized recommendation.
+                """.formatted(request.region(), activitiesList,
+                request.additionalWishes().isBlank() ? "none" : request.additionalWishes()).trim();
+
+        String suggestion = AgentInvocation
+                .create(agentPlatform, String.class)
+                .invoke(new UserInput(prompt));
+
+        List<String> activities = request.activities() == null ? List.of() : request.activities();
+        return new TravelResult(suggestion, prompt, request.region(), activities, request.additionalWishes());
+    }
+}
+
+```
 
 ## Configuration
 

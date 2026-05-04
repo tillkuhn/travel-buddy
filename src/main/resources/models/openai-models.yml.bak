@@ -1,3 +1,4 @@
+# rename to openai-models.yml to add custom entries for OpenAI
 models:
   - name: library/llama3.2
     model_id: library/llama3.2
