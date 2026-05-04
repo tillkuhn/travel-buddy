@@ -1,4 +1,5 @@
 LLM_MODEL ?= tinyllama # (481 MB, 2048 tokens context,  ~1.1B params)
+# meta-llama/Llama-3.2-1B-Instruct
 LLM_PORT ?= 11434
 
 .PHONY: help
@@ -16,7 +17,7 @@ test: ## run tests
 # tinyllama llama3.2
 .PHONY: llm
 llm: ## run ramalama with LLM model
-	ramalama serve $(LLM_MODEL) --port $(LLM_PORT) --name ramalama --max-tokens=56789 --thinking=False
+	ramalama serve $(LLM_MODEL) --port $(LLM_PORT) --name ramalama --max-tokens=5000 --thinking=False
 
 .PHONY: llm-tests
 llm-test: ## run curl chat
