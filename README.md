@@ -82,7 +82,21 @@ Fill out the form with your travel preferences:
 
 On submit, the app builds a prompt from your selections and invokes a single-step Embabel agent (`TravelPlannerAgent`) which asks the LLM for a concrete destination recommendation. The result is displayed on the next page.
 
-## Example Service with Agent Invocation
+## Example Agent & Service with Agent Invocation
+
+```Java
+// TravelPlannerAgent.java
+@Agent(description = "Suggests a travel destination based on region, activities, and additional wishes")
+public class TravelPlannerAgent {
+
+    @AchievesGoal(description = "Travel destination suggestion returned")
+    @Action
+    String suggestDestination(UserInput userInput, Ai ai) {
+        return ai.withAutoLlm()
+                .generateText(userInput.getContent());
+    }
+}
+```
 
 ```Java
 // TravelService.java
