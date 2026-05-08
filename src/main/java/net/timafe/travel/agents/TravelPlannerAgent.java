@@ -45,7 +45,7 @@ public class TravelPlannerAgent {
                 Region preference: %s
                 Best time to visit: %s
                 Desired activities: %s
-                Additional wishes: %s
+                Additional wishes to be considered: %s
 
                 Provide a concrete destination name and a compelling, personalized recommendation.
                 """.formatted(

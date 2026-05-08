@@ -17,13 +17,14 @@ public class TravelService {
 
     public TravelResult plan(TravelRequest request) {
         List<String> activities = request.activities() == null ? List.of() : request.activities();
-        TravelRequest normalized = new TravelRequest(request.region(), activities, request.additionalWishes());
+        TravelRequest tReq = new TravelRequest(request.region(), activities, request.additionalWishes());
 
         String suggestion = AgentInvocation
+                // Create a new AgentInvocation for the given platform and explicit result type.
                 .create(agentPlatform, String.class)
-                .invoke(normalized);
+                .invoke(tReq);
 
-        DestinationProfile profile = DestinationProfile.from(normalized.region(), normalized.activities(), normalized.additionalWishes());
-        return new TravelResult(suggestion, normalized.region(), normalized.activities(), normalized.additionalWishes(), profile.travelSeason());
+        DestinationProfile profile = DestinationProfile.from(tReq.region(), tReq.activities(), tReq.additionalWishes());
+        return new TravelResult(suggestion, tReq.region(), tReq.activities(), tReq.additionalWishes(), profile.travelSeason());
     }
 }
