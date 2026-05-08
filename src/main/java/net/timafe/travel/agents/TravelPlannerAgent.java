@@ -4,13 +4,10 @@ import com.embabel.agent.api.annotation.AchievesGoal;
 import com.embabel.agent.api.annotation.Action;
 import com.embabel.agent.api.annotation.Agent;
 import com.embabel.agent.api.common.Ai;
-import com.embabel.agent.domain.io.UserInput;
 import net.timafe.travel.DestinationProfile;
+import net.timafe.travel.TravelRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Arrays;
-import java.util.List;
 
 // Embabel lets you build agentic workflows based on the concept of goals, actions, and conditions.
 // The planner sequences actions automatically based on what each action consumes and produces.
@@ -24,19 +21,10 @@ public class TravelPlannerAgent {
     // Producing DestinationProfile onto the blackboard is the only purpose of this action;
     // the planner knows it must run this before suggestDestination can fire.
     @Action
-    DestinationProfile buildProfile(UserInput userInput) {
-        String[] parts = userInput.getContent().split("\\|");
-        String region = value(parts, "region");
-        String activitiesRaw = value(parts, "activities");
-        String wishes = value(parts, "wishes");
-
-        List<String> activities = activitiesRaw.isBlank()
-                ? List.of()
-                : Arrays.asList(activitiesRaw.split(","));
-
-        DestinationProfile profile = DestinationProfile.from(region, activities, wishes);
+    DestinationProfile buildDestinationProfile(TravelRequest request) {
+        DestinationProfile profile = DestinationProfile.from(request.region(), request.activities(), request.additionalWishes());
         log.debug("Built profile for region '{}' with {} activities, best season: {}",
-                region, activities.size(), profile.travelSeason());
+                request.region(), request.activities().size(), profile.travelSeason());
         return profile;
     }
 
@@ -72,12 +60,4 @@ public class TravelPlannerAgent {
         return content;
     }
 
-    private static String value(String[] parts, String key) {
-        for (String part : parts) {
-            if (part.startsWith(key + "=")) {
-                return part.substring(key.length() + 1);
-            }
-        }
-        return "";
-    }
 }
