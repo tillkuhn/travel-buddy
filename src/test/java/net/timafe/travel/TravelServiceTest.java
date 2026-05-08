@@ -26,15 +26,27 @@ class TravelServiceTest extends EmbabelMockitoIntegrationTest {
     }
 
     @Test
+    void planIncludesSeasonInPrompt() {
+        // The deterministic buildProfile action enriches the request with seasonal context
+        // before the LLM action fires — verify the LLM receives it.
+        whenGenerateText(p -> p.contains("Best time to visit")).thenReturn("Visit Queenstown!");
+
+        TravelResult result = travelService.plan(new TravelRequest("Australia", List.of("Hiking"), ""));
+
+        assertThat(result.suggestion()).isEqualTo("Visit Queenstown!");
+        assertThat(result.travelSeason()).contains("spring");
+        verifyGenerateText(p -> p.contains("Best time to visit") && p.contains("Australia"));
+    }
+
+    @Test
     void planBuildsPromptWithAllInputs() {
         whenGenerateText(p -> true).thenReturn("Some destination");
 
         TravelResult result = travelService.plan(new TravelRequest("Americas", List.of("Skiing"), "ski-in/ski-out resort"));
 
-        assertThat(result.prompt())
-                .contains("Americas")
-                .contains("Skiing")
-                .contains("ski-in/ski-out resort");
+        assertThat(result.region()).isEqualTo("Americas");
+        assertThat(result.activities()).containsExactly("Skiing");
+        assertThat(result.additionalWishes()).isEqualTo("ski-in/ski-out resort");
     }
 
     @Test

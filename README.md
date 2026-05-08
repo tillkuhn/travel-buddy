@@ -153,3 +153,13 @@ To switch models, update `embabel.models.default-llm` in `application.properties
 
 Despite the endpoint being `localhost:11434`, this app uses ramalama which speaks the **OpenAI wire protocol** — not the native Ollama protocol. The Embabel OpenAI starter (`embabel-agent-starter-openai`) is used accordingly.
 
+
+## Web Resources
+
+* [🤖 Embabel Agent Examples
+  ](https://github.com/embabel/embabel-agent-examples) for Kotlin and Java
+* [JCON2026 Talk "Comparing Agentic AI Frameworks for Java"](https://github.com/SandraAhlgrimm/ai-nutrition-planner/blob/main/slides.pdf)  (slides) and [ai-nutrition-planner sample app](https://github.com/SandraAhlgrimm/ai-nutrition-planner) (sourcecode) and [Agent Deeplink](https://github.com/SandraAhlgrimm/ai-nutrition-planner/blob/main/embabel/src/main/java/com/example/nutritionplanner/NutritionPlannerAgent.java)
+* For a sophisticated, realistic example application, see the  [Tripper: Embabel Travel Planner Agent](https://github.com/embabel/tripper)
+* [Run containerized AI models locally with RamaLama](https://www.cedricclyburn.com/articles/ramalama-containerized-models) (good summary)
+* [Baeldung: Creating an AI Agent in Java Using Embabel Agent Framework](https://www.baeldung.com/java-embabel-agent-framework)
+* [Build AI Agents in Java with Embabel: Step-by-Step Guide](https://bell-sw.com/blog/build-ai-agents-in-java-with-embabel-step-by-step-guide/)

@@ -27,3 +27,5 @@ Thumbs.db
 application-local.yml
 application-local.properties
 .claude
+.desloppify/
+scorecard.png

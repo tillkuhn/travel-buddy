@@ -258,12 +258,12 @@
                 <button type="submit" class="try-again-btn">&#x1F504; Try again</button>
             </form>
 
-            <button type="button" class="show-prompt-btn" onclick="togglePrompt(this)">&#x1F50D; Show prompt</button>
+            <button type="button" class="show-prompt-btn" onclick="togglePrompt(this)">&#x1F4C5; Show season tip</button>
         </div>
 
         <div class="prompt-box" id="promptBox">
-            <div class="prompt-label">Prompt sent to LLM</div>
-            <pre class="prompt-text" th:text="${prompt}"></pre>
+            <div class="prompt-label">Best time to visit (enriched by agent, no LLM)</div>
+            <pre class="prompt-text" th:text="${travelSeason}"></pre>
         </div>
     </div>
     <th:block th:replace="~{fragments :: loading-overlay}"></th:block>

@@ -34,10 +34,10 @@ public class TravelController {
     ) {
         TravelResult result = travelService.plan(new TravelRequest(region, activities, additionalWishes));
         model.addAttribute("suggestion", result.suggestion());
-        model.addAttribute("prompt", result.prompt());
         model.addAttribute("region", result.region());
         model.addAttribute("activities", result.activities());
         model.addAttribute("additionalWishes", result.additionalWishes());
+        model.addAttribute("travelSeason", result.travelSeason());
         return "result";
     }
 }

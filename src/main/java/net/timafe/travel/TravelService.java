@@ -17,27 +17,22 @@ public class TravelService {
     }
 
     public TravelResult plan(TravelRequest request) {
-        String activitiesList = (request.activities() == null || request.activities().isEmpty())
-                ? "no specific activities"
-                : String.join(", ", request.activities());
+        List<String> activities = request.activities() == null ? List.of() : request.activities();
 
-        String prompt = """
-                You are an expert travel consultant. Based on the following traveler preferences, suggest ONE specific travel destination and explain in 3-5 sentences why it is a great fit.
-                If you don't know, say you don't know. Do not guess!
-                
-                Region preference: %s
-                Desired activities: %s
-                Additional wishes: %s
-                
-                Provide a concrete destination name and a compelling, personalized recommendation.
-                """.formatted(request.region(), activitiesList,
-                request.additionalWishes().isBlank() ? "none" : request.additionalWishes()).trim();
+        // Pass structured inputs as a delimited string so the agent's first action
+        // can unpack them into a DestinationProfile without involving the LLM.
+        String payload = "region=%s|activities=%s|wishes=%s".formatted(
+                request.region(),
+                String.join(",", activities),
+                request.additionalWishes()
+        );
 
         String suggestion = AgentInvocation
                 .create(agentPlatform, String.class)
-                .invoke(new UserInput(prompt));
+                .invoke(new UserInput(payload));
 
-        List<String> activities = request.activities() == null ? List.of() : request.activities();
-        return new TravelResult(suggestion, prompt, request.region(), activities, request.additionalWishes());
+        // Re-derive the profile locally (pure deterministic) to carry travelSeason into the result.
+        DestinationProfile profile = DestinationProfile.from(request.region(), activities, request.additionalWishes());
+        return new TravelResult(suggestion, request.region(), activities, request.additionalWishes(), profile.travelSeason());
     }
 }
