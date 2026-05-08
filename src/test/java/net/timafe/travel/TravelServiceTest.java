@@ -62,7 +62,7 @@ class TravelServiceTest extends EmbabelMockitoIntegrationTest {
 
     @Test
     void planTreatsBlankAdditionalWishesAsNone() {
-        whenGenerateText(p -> p.contains("Additional wishes: none")).thenReturn("Bali");
+        whenGenerateText(p -> p.contains("Additional wishes to be considered: none")).thenReturn("Bali");
 
         TravelResult result = travelService.plan(new TravelRequest("Southeast Asia", List.of("Beaches"), ""));
 
