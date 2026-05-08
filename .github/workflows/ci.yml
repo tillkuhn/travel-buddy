@@ -21,4 +21,4 @@ jobs:
           cache: maven
 
       - name: Build and test
-        run: mvn --batch-mode verify
+        run: mvn --show-version --no-transfer-progress --batch-mode verify
