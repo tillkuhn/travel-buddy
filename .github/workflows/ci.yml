@@ -3,8 +3,14 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'pom.xml'
+      - 'src/**'
   pull_request:
     branches: [main]
+    paths:
+      - 'pom.xml'
+      - 'src/**'
 
 jobs:
   build:
