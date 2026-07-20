@@ -150,6 +150,33 @@ Key LLM settings in `src/main/resources/application.properties`:
 
 To switch models, update `embabel.models.default-llm` in `application.properties` and add a matching entry in `src/main/resources/models/openai-models.yml`.
 
+### Using a remote AI gateway (bearer-token auth)
+
+Instead of a local ramalama server, the app can target a remote, OpenAI-compatible AI gateway that
+requires a short-lived OAuth2 bearer token (Keycloak `client_credentials` grant). This is **opt-in
+and never committed**:
+
+1. Copy the template to a gitignored local file:
+   ```bash
+   cp application-local.properties.example application-local.properties
+   ```
+2. Fill in the gateway URL and credentials. The model is part of the gateway URL path, so `base-url`
+   includes it (Embabel appends `/v1/chat/completions`):
+   ```properties
+   embabel.agent.platform.models.openai.base-url=https://<gateway-host>/<model>
+   embabel.models.default-llm=<model-id-registered-in-openai-models.yml>
+   gateway.auth.token-url=https://<keycloak-host>/realms/<realm>/protocol/openid-connect/token
+   gateway.auth.client-id=<client-id>
+   gateway.auth.client-secret=<client-secret>
+   gateway.auth.scope=<scope>
+   ```
+3. Run as usual (`mvn spring-boot:run`). The app mints and **auto-refreshes** the token (they
+   typically expire after a few minutes), attaching it to every LLM request — no helper script or
+   restarts needed. See `net.timafe.travel.gateway` for the implementation.
+
+Setting `gateway.auth.token-url` is what switches the app into gateway mode; without the local file
+the default local-LLM behaviour is unchanged.
+
 ## Note on ramalama vs ollama
 
 Despite the endpoint being `localhost:11434`, this app uses ramalama which speaks the **OpenAI wire protocol** — not the native Ollama protocol. The Embabel OpenAI starter (`embabel-agent-starter-openai`) is used accordingly.

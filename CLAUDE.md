@@ -56,6 +56,56 @@ embabel.models.default-llm=gpt-4.1-mini
 
 The `default-llm` value must be a registered OpenAI model name, or a custom entry added to `openai-models.yml`.
 
+### Remote AI gateway (bearer-token auth)
+
+The app can also talk to a remote, OpenAI-compatible AI gateway that sits behind an OAuth2
+identity provider (Keycloak `client_credentials` grant) instead of the local ramalama server.
+This is **opt-in and gitignored** — the default committed configuration is unchanged.
+
+To enable it, copy `application-local.properties.example` to `application-local.properties`
+(gitignored) and fill in the gateway URL and credentials. Setting `gateway.auth.token-url` is
+what activates the machinery.
+
+**Architecture**: The app includes a local HTTP proxy (`GatewayProxyController`) that sits between
+Embabel and the real AI gateway. This proxy:
+- Intercepts all LLM requests from Embabel (which talks to `http://localhost:8080/gateway-proxy`)
+- Strips any stale cached Authorization headers
+- Injects fresh OAuth2 bearer tokens (auto-renewed when expired)
+- Forwards requests to the real gateway with SSL/TLS via custom certificates
+
+This architecture solves the Spring AI token caching problem - see **[CHALLENGES.md](CHALLENGES.md)**
+for detailed explanation of the technical challenges and why this proxy approach was chosen.
+
+#### Quick Setup
+
+1. **Copy example config**:
+   ```bash
+   cp src/main/resources/application-local.properties.example \
+      src/main/resources/application-local.properties
+   ```
+
+2. **Fill in OAuth2 credentials** in `application-local.properties`:
+   ```properties
+   gateway.auth.token-url=https://your-keycloak.example.com/realms/your-realm/protocol/openid-connect/token
+   gateway.auth.client-id=your-client-id
+   gateway.auth.client-secret=your-secret
+   gateway.proxy.real-url=https://your-gateway.example.com/model
+   ```
+
+3. **Configure SSL certificates** (if using company CA) - see **[CERTIFICATES.md](CERTIFICATES.md)**:
+   ```properties
+   gateway.auth.ssl.trust-store-path=certs/company-truststore.jks
+   gateway.auth.ssl.trust-store-password=changeit
+   ```
+
+4. **Verify proxy logs** on startup:
+   ```
+   INFO  GatewayProxyController - 🔄 Gateway proxy initialized - will forward requests to https://...
+   ```
+
+The whole config is `@ConditionalOnProperty("gateway.auth.token-url")`, so without setting this
+property the gateway integration is disabled and the local ramalama flow is untouched.
+
 ## Architecture
 
 The app is an **Embabel agent** travel planner with a Thymeleaf web UI. Main package: `net.timafe.travel`.

@@ -1,0 +1,251 @@
+# ============================================
+# openai-models.yml
+# ============================================
+# NOTE (this project): a project-local models/openai-models.yml *replaces* the list
+# bundled inside embabel-agent-openai-autoconfigure. This file is a copy of that bundled
+# list with one extra entry appended (see "AI GATEWAY MODELS" below) so both the local
+# ramalama flow (gpt-4.1-mini) and the remote gateway flow keep working.
+#
+# OpenAI and compatible models configuration
+# Model IDs verified against GET /v1/models on 2026-03-29
+# GPT-5.4 pricing verified against openai.com/api/pricing on 2026-03-29
+# All other pricing sourced from web — verify at openai.com/api/pricing
+# Note: undated aliases (e.g. "gpt-5.4") resolve to OpenAI's current recommended
+#       pinned version and may change over time. Use dated model IDs in the
+#       OpenAiModels constants if reproducibility is required.
+# Note: cached_input pricing is intentionally omitted — PerTokenPricingModel
+#       only supports usd_per1m_input_tokens and usd_per1m_output_tokens.
+
+models:
+  # ========================================
+  # GPT-5.4 FAMILY (Current Flagship - March 2026)
+  # Pricing verified: openai.com/api/pricing 2026-03-29
+  # Cached input (not stored): gpt54=$0.25, gpt54mini=$0.075, gpt54nano=$0.02
+  # ========================================
+
+  - name: "gpt54"
+    model_id: "gpt-5.4"
+    display_name: "GPT-5.4"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 2.50
+      usd_per1m_output_tokens: 15.00
+    special_handling:
+      supports_temperature: false
+
+  - name: "gpt54mini"
+    model_id: "gpt-5.4-mini"
+    display_name: "GPT-5.4 Mini"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.750
+      usd_per1m_output_tokens: 4.500
+    special_handling:
+      supports_temperature: false
+
+  - name: "gpt54nano"
+    model_id: "gpt-5.4-nano"
+    display_name: "GPT-5.4 Nano"
+    max_tokens: 8192
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.20
+      usd_per1m_output_tokens: 1.25
+    special_handling:
+      supports_temperature: false
+
+  - name: "gpt54pro"
+    model_id: "gpt-5.4-pro"
+    display_name: "GPT-5.4 Pro"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 15.0   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 60.0  # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  # ========================================
+  # GPT-5.2 FAMILY (December 2025)
+  # ========================================
+
+  - name: "gpt52"
+    model_id: "gpt-5.2"
+    display_name: "GPT-5.2"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 1.75   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 14.0  # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  - name: "gpt52pro"
+    model_id: "gpt-5.2-pro"
+    display_name: "GPT-5.2 Pro"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 21.0   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 168.0 # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  # ========================================
+  # GPT-5.1 FAMILY (November 2025)
+  # ========================================
+
+  - name: "gpt51"
+    model_id: "gpt-5.1"
+    display_name: "GPT-5.1"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 1.50   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 12.0  # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  # ========================================
+  # GPT-5 FAMILY (August 2025)
+  # ========================================
+
+  - name: "gpt5"
+    model_id: "gpt-5"
+    display_name: "GPT-5"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 1.25   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 10.0  # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  - name: "gpt5mini"
+    model_id: "gpt-5-mini"
+    display_name: "GPT-5 Mini"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.25   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 2.0   # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  - name: "gpt5nano"
+    model_id: "gpt-5-nano"
+    display_name: "GPT-5 Nano"
+    max_tokens: 8192
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.05   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 0.40  # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  - name: "gpt5pro"
+    model_id: "gpt-5-pro"
+    display_name: "GPT-5 Pro"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 15.0   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 60.0  # ESTIMATED - verify at openai.com/api/pricing
+    special_handling:
+      supports_temperature: false
+
+  # ========================================
+  # GPT-4.1 FAMILY (April 2025 - 1M token context window)
+  # ========================================
+
+  - name: "gpt41"
+    model_id: "gpt-4.1"
+    display_name: "GPT-4.1"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 2.0    # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 8.0   # ESTIMATED - verify at openai.com/api/pricing
+
+  - name: "gpt41mini"
+    model_id: "gpt-4.1-mini"
+    display_name: "GPT-4.1 Mini"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.40   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 1.60  # ESTIMATED - verify at openai.com/api/pricing
+
+  - name: "gpt41nano"
+    model_id: "gpt-4.1-nano"
+    display_name: "GPT-4.1 Nano"
+    max_tokens: 8192
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.10   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 0.40  # ESTIMATED - verify at openai.com/api/pricing
+
+  # ========================================
+  # GPT-4o FAMILY (retained for audio support only)
+  # ========================================
+
+  - name: "gpt4o"
+    model_id: "gpt-4o"
+    display_name: "GPT-4o"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 2.50   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 10.0  # ESTIMATED - verify at openai.com/api/pricing
+
+  - name: "gpt4omini"
+    model_id: "gpt-4o-mini"
+    display_name: "GPT-4o Mini"
+    max_tokens: 16384
+    temperature: 1.0
+    pricing_model:
+      usd_per1m_input_tokens: 0.15   # ESTIMATED - verify at openai.com/api/pricing
+      usd_per1m_output_tokens: 0.60  # ESTIMATED - verify at openai.com/api/pricing
+
+  # ========================================
+  # AI GATEWAY MODELS (OpenAI-compatible)
+  # Reached via a remote gateway configured in application-local.properties.
+  # The concrete model is selected by the gateway URL path (base-url), so model_id
+  # here only needs to match what the gateway expects in the request body.
+  # ========================================
+
+  - name: "gemini-2.5-flash-lite"
+    model_id: "gemini-2.5-flash-lite"
+    display_name: "Gemini 2.5 Flash Lite (via OpenAI-compatible gateway)"
+    max_tokens: 8192
+    temperature: 0.7
+    pricing_model:
+      usd_per1m_input_tokens: 0.10   # ESTIMATED
+      usd_per1m_output_tokens: 0.40  # ESTIMATED
+
+# ========================================
+# EMBEDDING MODELS
+# ========================================
+embedding_models:
+  - name: "text_embedding_3_large"
+    model_id: "text-embedding-3-large"
+    display_name: "Text Embedding 3 Large"
+    dimensions: 3072
+    pricing_model:
+      usd_per1m_tokens: 0.13
+
+  - name: "text_embedding_3_small"
+    model_id: "text-embedding-3-small"
+    display_name: "Text Embedding 3 Small"
+    dimensions: 1536
+    pricing_model:
+      usd_per1m_tokens: 0.02
+
+  - name: "text_embedding_ada_002"
+    model_id: "text-embedding-ada-002"
+    display_name: "Text Embedding Ada 002"
+    dimensions: 1536
+    pricing_model:
+      usd_per1m_tokens: 0.10

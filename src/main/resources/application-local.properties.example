@@ -1,0 +1,22 @@
+# Example configuration for remote AI gateway with OAuth2 authentication
+# Copy this file to application-local.properties (gitignored) and fill in your values
+
+# OAuth2 token endpoint (Keycloak)
+gateway.auth.token-url=https://your-keycloak.example.com/realms/your-realm/protocol/openid-connect/token
+gateway.auth.client-id=your-client-id
+gateway.auth.client-secret=your-client-secret
+gateway.auth.scope=openid
+
+# SSL/TLS Certificate Configuration (required for company/internal CAs)
+# See CERTIFICATES.md for detailed setup instructions
+# These settings configure SSL for ALL HTTPS connections in the JVM
+gateway.auth.ssl.trust-store-path=certs/company-truststore.jks
+gateway.auth.ssl.trust-store-password=changeit
+gateway.auth.ssl.trust-store-type=JKS
+
+# AI Gateway base URL (including model path)
+embabel.agent.platform.models.openai.base-url=https://aig.mlops.example.com/gemini-2.5-flash-lite
+embabel.agent.platform.models.openai.api-key=unused
+
+# Model selection (must match an entry in src/main/resources/models/openai-models.yml)
+embabel.models.default-llm=gemini-2.5-flash-lite

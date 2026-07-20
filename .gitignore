@@ -29,3 +29,15 @@ application-local.properties
 .claude
 .desloppify/
 scorecard.png
+
+# Certificates and keystores (company-specific, must not be committed)
+certs/
+*.jks
+*.p12
+*.pfx
+*.pem
+*.crt
+*.cer
+*.key
+!src/test/resources/**/*.jks
+!src/test/resources/**/*.p12
