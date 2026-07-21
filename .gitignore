@@ -26,6 +26,8 @@ Thumbs.db
 *.env.local
 application-local.yml
 application-local.properties
+application-local.yml.sav
+application-local.properties.sav
 .claude
 .desloppify/
 scorecard.png
