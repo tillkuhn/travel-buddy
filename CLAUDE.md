@@ -66,15 +66,20 @@ To enable it, copy `application-local.properties.example` to `application-local.
 (gitignored) and fill in the gateway URL and credentials. Setting `gateway.auth.token-url` is
 what activates the machinery.
 
-**Architecture**: The app includes a local HTTP proxy (`GatewayProxyController`) that sits between
-Embabel and the real AI gateway. This proxy:
-- Intercepts all LLM requests from Embabel (which talks to `http://localhost:8080/gateway-proxy`)
-- Strips any stale cached Authorization headers
-- Injects fresh OAuth2 bearer tokens (auto-renewed when expired)
-- Forwards requests to the real gateway with SSL/TLS via custom certificates
+**Architecture**: `GatewayAuthConfig` wires standard Spring Security OAuth2 client machinery
+(`OAuth2AuthorizedClientManager` + `OAuth2ClientHttpRequestInterceptor`, from
+`spring-boot-starter-oauth2-client`) directly into Embabel's HTTP client — no local proxy. This
+works because Embabel's `OpenAiModelsConfig` looks up an `ObjectProvider<RestClient.Builder>`
+qualified `"aiModelRestClientBuilder"` when building its `OpenAiApi` client; `GatewayAuthConfig`
+publishes that exact bean with the OAuth2 interceptor attached, so it:
+- Authorizes every outbound LLM HTTP call via `OAuth2AuthorizedClientManager`
+- Injects fresh OAuth2 bearer tokens (auto-renewed ~60s before expiry, Spring Security's default)
+- Talks directly to the real gateway URL (no `localhost:8080/gateway-proxy` indirection)
+- Applies SSL/TLS via custom certificates at the JVM level (independent concern, see CERTIFICATES.md)
 
-This architecture solves the Spring AI token caching problem - see **[CHALLENGES.md](CHALLENGES.md)**
-for detailed explanation of the technical challenges and why this proxy approach was chosen.
+This replaced an earlier local-HTTP-proxy-based implementation — see
+**[gateway-proxy-removal.md](gateway-proxy-removal.md)** for the design rationale and
+**[CHALLENGES.md](CHALLENGES.md)** for the original technical investigation.
 
 #### Quick Setup
 
@@ -89,7 +94,8 @@ for detailed explanation of the technical challenges and why this proxy approach
    gateway.auth.token-url=https://your-keycloak.example.com/realms/your-realm/protocol/openid-connect/token
    gateway.auth.client-id=your-client-id
    gateway.auth.client-secret=your-secret
-   gateway.proxy.real-url=https://your-gateway.example.com/model
+   gateway.auth.scope=your-scope
+   embabel.agent.platform.models.openai.base-url=https://your-gateway.example.com/model
    ```
 
 3. **Configure SSL certificates** (if using company CA) - see **[CERTIFICATES.md](CERTIFICATES.md)**:
@@ -98,9 +104,10 @@ for detailed explanation of the technical challenges and why this proxy approach
    gateway.auth.ssl.trust-store-password=changeit
    ```
 
-4. **Verify proxy logs** on startup:
+4. **Verify on startup** — you should see:
    ```
-   INFO  GatewayProxyController - 🔄 Gateway proxy initialized - will forward requests to https://...
+   INFO  GatewayAuthConfig - Gateway OAuth2 authorized client manager configured (client_credentials grant)
+   INFO  GatewayAuthConfig - Created 'aiModelRestClientBuilder' RestClient.Builder with OAuth2 bearer-token interceptor
    ```
 
 The whole config is `@ConditionalOnProperty("gateway.auth.token-url")`, so without setting this

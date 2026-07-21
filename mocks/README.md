@@ -1,7 +1,7 @@
 # Mock OIDC + AI Gateway
 
 Two dependency-free Python (stdlib only) HTTP servers that let you exercise the
-`gateway.auth.*` / `GatewayProxyController` / `GatewayTokenService` code path
+`gateway.auth.*` / `GatewayAuthConfig` OAuth2 client-credentials code path
 (short-lived OAuth2 bearer tokens against an OpenAI-compatible gateway) **without
 network access to a real gateway or identity provider**. Useful when developing
 offline or evaluating the token-refresh design.
@@ -97,17 +97,19 @@ Equivalent manual steps, if you're not using `make`:
    slot used for the real remote-gateway scenario (scenario 3), so don't use both
    at once.
 3. Submit the form at [http://localhost:8080](http://localhost:8080). Watch the
-   app log (`logging.level.net.timafe.travel.gateway=DEBUG`, already set) — you'll
-   see `GatewayProxyController` proxy the request and `GatewayTokenService`
-   fetch/reuse a token.
+   app log (`logging.level.net.timafe.travel.gateway=DEBUG`, already set) — the
+   OAuth2 `aiModelRestClientBuilder` interceptor (see `GatewayAuthConfig`)
+   authorizes each outbound LLM call, fetching/reusing a token via Spring
+   Security's `OAuth2AuthorizedClientManager`.
 4. **Token expiry test**: submit the form once, wait longer than
-   `MOCK_TOKEN_TTL` (the token's `renew-after` is set ~30s before its reported
-   expiry — see `GatewayTokenService.EXPIRY_MARGIN_SECONDS` — so with a TTL
-   below 30s the app effectively fetches a new token on every request; that's
-   expected and still proves the refresh path), then submit again. The log
-   will show a fresh `Requesting new AI gateway token` line each time, and the
-   returned suggestion text differs between requests (random destination),
-   confirming a real round trip rather than a cached response.
+   `MOCK_TOKEN_TTL` (Spring's client-credentials provider renews ~60s before
+   the reported expiry — see `ClientCredentialsOAuth2AuthorizedClientProvider`'s
+   default clock skew — so with a TTL below 60s the app effectively fetches a
+   new token on every request; that's expected and still proves the refresh
+   path), then submit again. `mocks/.mock_oidc.log` will show a fresh `issued
+   token` line each time, and the returned suggestion text differs between
+   requests (random destination), confirming a real round trip rather than a
+   cached response.
 
 If you want to prove the mock gateway itself rejects an actually-expired token
 (rather than just observing the app's proactive refresh), use the manual curl

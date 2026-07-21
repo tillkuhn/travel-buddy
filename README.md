@@ -205,35 +205,38 @@ Setting `gateway.auth.token-url` is what switches the app into gateway mode; wit
 the default local-LLM behaviour is unchanged.
 
 
-## Local proxy for short-lived OAuth2/OIDC tokens
+## OAuth2 client-credentials auth for short-lived gateway tokens
 
-Spring AI (which Embabel builds on) reads its OpenAI-compatible `api-key` **once at startup** and
-caches it for the lifetime of the JVM. That's fine for static API keys, but breaks down when a
-gateway requires OAuth2 bearer tokens that expire every few minutes — there's no supported hook
-(dynamic `PropertySource`, custom `ApiKey` bean, HTTP interceptor) to refresh it per request, because
-Embabel creates its own internal HTTP clients deep in the stack.
+Spring AI (which Embabel builds on) normally reads its OpenAI-compatible `api-key` **once at
+startup** and caches it for the lifetime of the JVM — fine for static API keys, but broken for
+gateways that require OAuth2 bearer tokens that expire every few minutes.
 
-The fix is a **local HTTP proxy** (`GatewayProxyController`) that sits between Embabel and the real
-gateway: Embabel is pointed at `http://localhost:8080/gateway-proxy` instead of the real gateway URL,
-and the proxy transparently fetches a fresh token, strips any stale `Authorization` header from the
-incoming request, attaches the fresh bearer token, and forwards the request upstream.
+Rather than routing requests through a local HTTP proxy, the app uses standard Spring Security
+OAuth2 client machinery (`OAuth2AuthorizedClientManager` + `OAuth2ClientHttpRequestInterceptor`,
+from `spring-boot-starter-oauth2-client`) wired directly into Embabel's HTTP client. This works
+because Embabel's `OpenAiModelsConfig` looks up an `ObjectProvider<RestClient.Builder>` qualified
+`"aiModelRestClientBuilder"` when building its underlying `OpenAiApi` client — `GatewayAuthConfig`
+publishes exactly that bean with the OAuth2 interceptor attached, so every outbound LLM HTTP call
+gets a freshly-minted bearer token, with no local proxy or dynamic `PropertySource` trickery
+needed.
 
 Certificate trust for a gateway/OIDC provider with an internal CA is a **separate, independent
-concern**, solved via JVM-level truststore system properties (`GatewayAuthConfig`) — not by the
-proxy. See [CERTIFICATES.md](CERTIFICATES.md).
+concern**, solved via JVM-level truststore system properties (also in `GatewayAuthConfig`). See
+[CERTIFICATES.md](CERTIFICATES.md).
 
-### When is the proxy actually needed?
+### When is this needed?
 
-| Situation | Proxy required? |
+| Situation | OAuth2 client wiring required? |
 |---|---|
 | Local ramalama, no auth | No |
 | Remote gateway with a long-lived static API key | No — a plain `api-key` property works |
 | Remote gateway with short-lived OAuth2/OIDC tokens (this repo's use case) | **Yes** — only way to inject a fresh token per request |
 | Custom CA / certificate trust only, static token | No — JVM truststore config alone suffices |
 
-In short: the proxy exists solely to work around Spring AI's one-time token caching combined with
-short-lived OAuth2 tokens. It's gated behind `gateway.auth.token-url` and disabled by default; see
-[CHALLENGES.md](CHALLENGES.md) for the full investigation and rejected alternatives.
+It's gated behind `gateway.auth.token-url` and disabled by default; see
+[CHALLENGES.md](CHALLENGES.md) for the full investigation and rejected alternatives, and
+[gateway-proxy-removal.md](gateway-proxy-removal.md) for the design notes behind this approach
+(which replaced an earlier local-proxy-based implementation).
 
 ### Component overview
 
@@ -246,28 +249,28 @@ flowchart TD
         Controller["TravelController"]
         Service["TravelService"]
         Agent["TravelPlannerAgent<br/>(Embabel / Spring AI)"]
-        Proxy["GatewayProxyController<br/>/gateway-proxy/**"]
-        TokenSvc["GatewayTokenService"]
+        Builder["aiModelRestClientBuilder<br/>(RestClient.Builder + OAuth2 interceptor)"]
+        Manager["OAuth2AuthorizedClientManager"]
         SSL["GatewayAuthConfig<br/>(JVM truststore)"]
 
         Controller --> Service
         Service --> Agent
-        Agent -->|"chat completions<br/>(cached Authorization header)"| Proxy
-        Proxy -->|"getToken()"| TokenSvc
+        Agent -->|"chat completions"| Builder
+        Builder -->|"authorize()"| Manager
     end
 
     OIDC["OIDC Provider<br/>(token endpoint)"]
     Gateway["Remote AI Gateway<br/>(OpenAI-compatible)"]
 
     Browser -->|"HTTP form"| Controller
-    TokenSvc -->|"client_credentials grant<br/>(refreshed on expiry)"| OIDC
-    Proxy -->|"forward request +<br/>fresh Bearer token"| Gateway
+    Manager -->|"client_credentials grant<br/>(refreshed on expiry)"| OIDC
+    Builder -->|"request + fresh Bearer token"| Gateway
     SSL -.->|"trusts internal CA for"| OIDC
     SSL -.->|"trusts internal CA for"| Gateway
 ```
 
 > When targeting local ramalama instead (no OAuth2/OIDC, no custom CA), `Agent` talks directly to
-> ramalama and the `Proxy`, `TokenSvc`, and `SSL` components are inactive (gated by
+> ramalama and the `Builder`, `Manager`, and `SSL` components are inactive (gated by
 > `gateway.auth.token-url`).
 
 ### Communication flow
@@ -275,25 +278,24 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant Embabel as Embabel / Spring AI<br/>(OpenAI client)
-    participant Proxy as GatewayProxyController<br/>(localhost:8080/gateway-proxy)
-    participant TokenSvc as GatewayTokenService
+    participant Builder as aiModelRestClientBuilder<br/>(OAuth2ClientHttpRequestInterceptor)
+    participant Manager as OAuth2AuthorizedClientManager
     participant OIDC as OIDC Provider<br/>(token endpoint)
     participant Gateway as Remote AI Gateway
 
-    Embabel->>Proxy: POST /gateway-proxy/v1/chat/completions<br/>(stale/cached Authorization header)
-    Proxy->>Proxy: Strip stale Authorization header
-    Proxy->>TokenSvc: getToken()
+    Embabel->>Builder: POST /v1/chat/completions
+    Builder->>Manager: authorize(registrationId="gateway")
     alt Token missing or expired
-        TokenSvc->>OIDC: client_credentials grant<br/>(client_id, client_secret, scope)
-        OIDC-->>TokenSvc: access_token (expires_in=300s)
-        TokenSvc->>TokenSvc: cache token, renew ~30s before expiry
+        Manager->>OIDC: client_credentials grant<br/>(client_id, client_secret, scope)
+        OIDC-->>Manager: access_token (expires_in=...)
+        Manager->>Manager: cache token, renew ~60s before expiry
     else Token still valid
-        TokenSvc-->>TokenSvc: return cached token
+        Manager-->>Manager: return cached token
     end
-    TokenSvc-->>Proxy: fresh access_token
-    Proxy->>Gateway: forward request + fresh Bearer token
-    Gateway-->>Proxy: chat completion response
-    Proxy-->>Embabel: forwarded response
+    Manager-->>Builder: fresh access_token
+    Builder->>Gateway: forward request + fresh Bearer token
+    Gateway-->>Builder: chat completion response
+    Builder-->>Embabel: response
 ```
 
 ## Note on ramalama vs ollama
