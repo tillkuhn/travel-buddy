@@ -207,6 +207,41 @@ In short: the proxy exists solely to work around Spring AI's one-time token cach
 short-lived OAuth2 tokens. It's gated behind `gateway.auth.token-url` and disabled by default; see
 [CHALLENGES.md](CHALLENGES.md) for the full investigation and rejected alternatives.
 
+### Component overview
+
+```mermaid
+flowchart TD
+    Browser["Browser<br/>(Travel Buddy UI)"]
+
+    subgraph JVM["Spring Boot Application (localhost:8080)"]
+        direction TB
+        Controller["TravelController"]
+        Service["TravelService"]
+        Agent["TravelPlannerAgent<br/>(Embabel / Spring AI)"]
+        Proxy["GatewayProxyController<br/>/gateway-proxy/**"]
+        TokenSvc["GatewayTokenService"]
+        SSL["GatewayAuthConfig<br/>(JVM truststore)"]
+
+        Controller --> Service
+        Service --> Agent
+        Agent -->|"chat completions<br/>(cached Authorization header)"| Proxy
+        Proxy -->|"getToken()"| TokenSvc
+    end
+
+    OIDC["OIDC Provider<br/>(token endpoint)"]
+    Gateway["Remote AI Gateway<br/>(OpenAI-compatible)"]
+
+    Browser -->|"HTTP form"| Controller
+    TokenSvc -->|"client_credentials grant<br/>(refreshed on expiry)"| OIDC
+    Proxy -->|"forward request +<br/>fresh Bearer token"| Gateway
+    SSL -.->|"trusts internal CA for"| OIDC
+    SSL -.->|"trusts internal CA for"| Gateway
+```
+
+> When targeting local ramalama instead (no OAuth2/OIDC, no custom CA), `Agent` talks directly to
+> ramalama and the `Proxy`, `TokenSvc`, and `SSL` components are inactive (gated by
+> `gateway.auth.token-url`).
+
 ### Communication flow
 
 ```mermaid
