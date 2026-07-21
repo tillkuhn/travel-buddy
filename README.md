@@ -150,6 +150,124 @@ Key LLM settings in `src/main/resources/application.properties`:
 
 To switch models, update `embabel.models.default-llm` in `application.properties` and add a matching entry in `src/main/resources/models/openai-models.yml`.
 
+### Using a remote AI gateway (bearer-token auth)
+
+Instead of a local ramalama server, the app can target a remote, OpenAI-compatible AI gateway that
+requires a short-lived OAuth2 bearer token (`client_credentials` grant against an OIDC provider). This is
+**opt-in and never committed**:
+
+1. Copy the template to a gitignored local file:
+   ```bash
+   cp application-local.properties.example application-local.properties
+   ```
+2. Fill in the gateway URL and credentials. The model is part of the gateway URL path, so `base-url`
+   includes it (Embabel appends `/v1/chat/completions`):
+   ```properties
+   embabel.agent.platform.models.openai.base-url=https://<gateway-host>/<model>
+   embabel.models.default-llm=<model-id-registered-in-openai-models.yml>
+   gateway.auth.token-url=https://<oidc-provider-host>/realms/<realm>/protocol/openid-connect/token
+   gateway.auth.client-id=<client-id>
+   gateway.auth.client-secret=<client-secret>
+   gateway.auth.scope=<scope>
+   ```
+3. Run as usual (`mvn spring-boot:run`). The app mints and **auto-refreshes** the token (they
+   typically expire after a few minutes), attaching it to every LLM request — no helper script or
+   restarts needed. See `net.timafe.travel.gateway` for the implementation.
+
+Setting `gateway.auth.token-url` is what switches the app into gateway mode; without the local file
+the default local-LLM behaviour is unchanged.
+
+## Local proxy for short-lived OAuth2/OIDC tokens
+
+Spring AI (which Embabel builds on) reads its OpenAI-compatible `api-key` **once at startup** and
+caches it for the lifetime of the JVM. That's fine for static API keys, but breaks down when a
+gateway requires OAuth2 bearer tokens that expire every few minutes — there's no supported hook
+(dynamic `PropertySource`, custom `ApiKey` bean, HTTP interceptor) to refresh it per request, because
+Embabel creates its own internal HTTP clients deep in the stack.
+
+The fix is a **local HTTP proxy** (`GatewayProxyController`) that sits between Embabel and the real
+gateway: Embabel is pointed at `http://localhost:8080/gateway-proxy` instead of the real gateway URL,
+and the proxy transparently fetches a fresh token, strips any stale `Authorization` header from the
+incoming request, attaches the fresh bearer token, and forwards the request upstream.
+
+Certificate trust for a gateway/OIDC provider with an internal CA is a **separate, independent
+concern**, solved via JVM-level truststore system properties (`GatewayAuthConfig`) — not by the
+proxy. See [CERTIFICATES.md](CERTIFICATES.md).
+
+### When is the proxy actually needed?
+
+| Situation | Proxy required? |
+|---|---|
+| Local ramalama, no auth | No |
+| Remote gateway with a long-lived static API key | No — a plain `api-key` property works |
+| Remote gateway with short-lived OAuth2/OIDC tokens (this repo's use case) | **Yes** — only way to inject a fresh token per request |
+| Custom CA / certificate trust only, static token | No — JVM truststore config alone suffices |
+
+In short: the proxy exists solely to work around Spring AI's one-time token caching combined with
+short-lived OAuth2 tokens. It's gated behind `gateway.auth.token-url` and disabled by default; see
+[CHALLENGES.md](CHALLENGES.md) for the full investigation and rejected alternatives.
+
+### Component overview
+
+```mermaid
+flowchart TD
+    Browser["Browser<br/>(Travel Buddy UI)"]
+
+    subgraph JVM["Spring Boot Application (localhost:8080)"]
+        direction TB
+        Controller["TravelController"]
+        Service["TravelService"]
+        Agent["TravelPlannerAgent<br/>(Embabel / Spring AI)"]
+        Proxy["GatewayProxyController<br/>/gateway-proxy/**"]
+        TokenSvc["GatewayTokenService"]
+        SSL["GatewayAuthConfig<br/>(JVM truststore)"]
+
+        Controller --> Service
+        Service --> Agent
+        Agent -->|"chat completions<br/>(cached Authorization header)"| Proxy
+        Proxy -->|"getToken()"| TokenSvc
+    end
+
+    OIDC["OIDC Provider<br/>(token endpoint)"]
+    Gateway["Remote AI Gateway<br/>(OpenAI-compatible)"]
+
+    Browser -->|"HTTP form"| Controller
+    TokenSvc -->|"client_credentials grant<br/>(refreshed on expiry)"| OIDC
+    Proxy -->|"forward request +<br/>fresh Bearer token"| Gateway
+    SSL -.->|"trusts internal CA for"| OIDC
+    SSL -.->|"trusts internal CA for"| Gateway
+```
+
+> When targeting local ramalama instead (no OAuth2/OIDC, no custom CA), `Agent` talks directly to
+> ramalama and the `Proxy`, `TokenSvc`, and `SSL` components are inactive (gated by
+> `gateway.auth.token-url`).
+
+### Communication flow
+
+```mermaid
+sequenceDiagram
+    participant Embabel as Embabel / Spring AI<br/>(OpenAI client)
+    participant Proxy as GatewayProxyController<br/>(localhost:8080/gateway-proxy)
+    participant TokenSvc as GatewayTokenService
+    participant OIDC as OIDC Provider<br/>(token endpoint)
+    participant Gateway as Remote AI Gateway
+
+    Embabel->>Proxy: POST /gateway-proxy/v1/chat/completions<br/>(stale/cached Authorization header)
+    Proxy->>Proxy: Strip stale Authorization header
+    Proxy->>TokenSvc: getToken()
+    alt Token missing or expired
+        TokenSvc->>OIDC: client_credentials grant<br/>(client_id, client_secret, scope)
+        OIDC-->>TokenSvc: access_token (expires_in=300s)
+        TokenSvc->>TokenSvc: cache token, renew ~30s before expiry
+    else Token still valid
+        TokenSvc-->>TokenSvc: return cached token
+    end
+    TokenSvc-->>Proxy: fresh access_token
+    Proxy->>Gateway: forward request + fresh Bearer token
+    Gateway-->>Proxy: chat completion response
+    Proxy-->>Embabel: forwarded response
+```
+
 ## Note on ramalama vs ollama
 
 Despite the endpoint being `localhost:11434`, this app uses ramalama which speaks the **OpenAI wire protocol** — not the native Ollama protocol. The Embabel OpenAI starter (`embabel-agent-starter-openai`) is used accordingly.
