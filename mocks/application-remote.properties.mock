@@ -1,5 +1,9 @@
-# Copy this to the project root as application-local.properties (gitignored) to run
+# Copy this to the project root as application-remote.properties (gitignored) to run
 # the app against mocks/mock_oidc.py + mocks/mock_gateway.py instead of a real gateway.
+# Still requires the "remote" Spring profile to be active (mvn spring-boot:run
+# -Dspring-boot.run.profiles=remote), since application-remote.properties only takes
+# effect under that profile.
+spring.config.activate.on-profile=remote
 gateway.auth.token-url=http://localhost:9200/realms/mock/protocol/openid-connect/token
 gateway.auth.client-id=mock-client
 gateway.auth.client-secret=mock-secret

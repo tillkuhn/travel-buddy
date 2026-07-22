@@ -30,8 +30,8 @@ help:
 	@grep -E "^$$PFX[0-9a-zA-Z_-]+:.*?## .*$$" $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'; echo "";\
 
 .PHONY: run
-run: ## [scenario 1, default] runs the app against local ramalama (localhost:11434)
-	@[ -f application-local.properties ] && echo "⚠️  ./application-local.properties exists and will override these defaults - see 'make run-remote'" || true
+run: ## [scenario 1, default] runs the app against local ramalama (localhost:11434); application-remote.properties, if present, is ignored (profile-gated)
+	@[ -f application-remote.properties ] && echo "ℹ️  ./application-remote.properties exists but only activates with the 'remote' profile - see 'make run-remote'" || true
 	@lsof -tiTCP:8080 -sTCP:LISTEN >/dev/null 2>&1 && echo "⚠️  port 8080 is already in use - the app may fail to start; run 'make stop' first if a stale instance (e.g. from run-mock) is still running" || true
 	mvn spring-boot:run
 
@@ -40,14 +40,14 @@ run-mock: mocks-start ## [scenario 2] runs the app against the mock OIDC + AI ga
 	mvn spring-boot:run -Dspring-boot.run.profiles=mock
 
 .PHONY: run-remote
-run-remote: ## [scenario 3] runs the app against the real remote AI gateway; requires ./application-local.properties (gitignored, not in version control)
-	@[ -f application-local.properties ] || { \
-		echo "❌ ./application-local.properties not found."; \
-		echo "   Copy src/main/resources/application-local.properties.example to ./application-local.properties (project root)"; \
+run-remote: ## [scenario 3] runs the app against the real remote AI gateway; requires ./application-remote.properties (gitignored, not in version control)
+	@[ -f application-remote.properties ] || { \
+		echo "❌ ./application-remote.properties not found."; \
+		echo "   Copy src/main/resources/application-remote.properties.example to ./application-remote.properties (project root)"; \
 		echo "   and fill in the real gateway URL + OAuth2 credentials. See README.md."; \
 		exit 1; \
 	}
-	mvn spring-boot:run
+	mvn spring-boot:run -Dspring-boot.run.profiles=remote
 
 .PHONY: stop
 stop: ## kill any app instance (from run/run-mock/run-remote) still listening on port 8080

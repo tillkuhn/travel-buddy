@@ -1,5 +1,8 @@
 # Example configuration for remote AI gateway with OAuth2 authentication
-# Copy this file to application-local.properties (gitignored) and fill in your values
+# Copy this file to ./application-remote.properties (project root, gitignored) and fill in your values.
+# Activated via Spring profile "remote" (make run-remote, or:
+# mvn spring-boot:run -Dspring-boot.run.profiles=remote).
+spring.config.activate.on-profile=remote
 
 # OAuth2 token endpoint (Keycloak)
 gateway.auth.token-url=https://your-keycloak.example.com/realms/your-realm/protocol/openid-connect/token

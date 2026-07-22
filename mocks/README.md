@@ -91,11 +91,11 @@ Equivalent manual steps, if you're not using `make`:
    ```bash
    mvn spring-boot:run -Dspring-boot.run.profiles=mock
    ```
-   Alternatively, copy `mocks/application-local.properties.mock` to the project
-   root as `application-local.properties` (gitignored) and run `mvn spring-boot:run`
-   without any profile flag — same effect, but occupies the same gitignored file
-   slot used for the real remote-gateway scenario (scenario 3), so don't use both
-   at once.
+   Alternatively, copy `mocks/application-remote.properties.mock` to the project
+   root as `application-remote.properties` (gitignored) and run
+   `mvn spring-boot:run -Dspring-boot.run.profiles=remote` — same effect, but
+   occupies the same gitignored file slot used for the real remote-gateway
+   scenario (scenario 3), so don't use both at once.
 3. Submit the form at [http://localhost:8080](http://localhost:8080). Watch the
    app log (`logging.level.net.timafe.travel.gateway=DEBUG`, already set) — the
    OAuth2 `aiModelRestClientBuilder` interceptor (see `GatewayAuthConfig`)

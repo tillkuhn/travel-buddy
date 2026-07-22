@@ -243,7 +243,7 @@ Instead of fighting Spring AI's internal caching, we introduced a **local HTTP p
 Point Embabel to the local proxy instead of the real gateway:
 
 ```properties
-# application-local.properties
+# application-remote.properties
 embabel.agent.platform.models.openai.base-url=http://localhost:8080/gateway-proxy
 gateway.proxy.real-url=https://aig.example.com/gemini-2.5-flash-lite
 ```
@@ -365,14 +365,14 @@ net.timafe.travel.gateway/
 
 ### Configuration Files
 
-#### `application-local.properties` (gitignored)
+#### `application-remote.properties` (gitignored)
 Contains environment-specific secrets:
 - OAuth2 credentials (client ID, secret)
 - Token endpoint URL
 - Real gateway URL
 - SSL truststore path/password
 
-#### `application-local.properties.example` (committed)
+#### `application-remote.properties.example` (committed)
 Template with placeholder values for other developers to copy.
 
 ### Security Considerations

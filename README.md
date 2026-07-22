@@ -156,12 +156,14 @@ To switch models, update `embabel.models.default-llm` in `application.properties
 |---|---|---|---|
 | 1 | Local ramalama, no auth (default) | `make run` | `application.properties` (committed) |
 | 2 | Mock OIDC + mock AI gateway, offline dev/testing | `make run-mock` | `application-mock.properties` (committed, non-sensitive, Spring profile `mock`) |
-| 3 | Real remote AI gateway, OAuth2 bearer token | `make run-remote` | `./application-local.properties` (gitignored — you create this yourself) |
+| 3 | Real remote AI gateway, OAuth2 bearer token | `make run-remote` | `./application-remote.properties` (gitignored — you create this yourself), Spring profile `remote` |
 
 Scenarios 1 and 2 are safe to keep in version control (no secrets, everything
 points at `localhost`). Scenario 3 requires real credentials and must **never**
-be committed — `make run-remote` checks for `./application-local.properties`
-(project root) and refuses to start with instructions if it's missing.
+be committed — `make run-remote` checks for `./application-remote.properties`
+(project root) and refuses to start with instructions if it's missing. The file
+is only read if the `remote` profile is active (`spring.config.activate.on-profile=remote`
+inside it), so leaving it in place doesn't affect `make run`.
 
 ### Scenario 2: mock OIDC + AI gateway (no network access needed)
 
@@ -185,7 +187,7 @@ requires a short-lived OAuth2 bearer token (`client_credentials` grant against a
 1. Copy the template to a gitignored local file **at the project root** (this is
    where `spring.config.import` looks for it, not `src/main/resources`):
    ```bash
-   cp src/main/resources/application-local.properties.example application-local.properties
+   cp src/main/resources/application-remote.properties.example application-remote.properties
    ```
 2. Fill in the gateway URL and credentials. The model is part of the gateway URL path, so `base-url`
    includes it (Embabel appends `/v1/chat/completions`):
@@ -197,12 +199,15 @@ requires a short-lived OAuth2 bearer token (`client_credentials` grant against a
    gateway.auth.client-secret=<client-secret>
    gateway.auth.scope=<scope>
    ```
-3. Run with `make run-remote` (or `mvn spring-boot:run`). The app mints and **auto-refreshes** the
-   token (they typically expire after a few minutes), attaching it to every LLM request — no helper
-   script or restarts needed. See `net.timafe.travel.gateway` for the implementation.
+3. Run with `make run-remote` (or `mvn spring-boot:run -Dspring-boot.run.profiles=remote`). The app
+   mints and **auto-refreshes** the token (they typically expire after a few minutes), attaching it
+   to every LLM request — no helper script or restarts needed. See `net.timafe.travel.gateway` for
+   the implementation.
 
-Setting `gateway.auth.token-url` is what switches the app into gateway mode; without the local file
-the default local-LLM behaviour is unchanged.
+The `remote` Spring profile is what switches the app into gateway mode — the file's properties
+carry `spring.config.activate.on-profile=remote` so they only apply when that profile is active;
+`make run` (no profile) ignores the file entirely even if it's present, and the default local-LLM
+behaviour is unchanged.
 
 
 ## OAuth2 client-credentials auth for short-lived gateway tokens

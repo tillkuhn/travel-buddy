@@ -79,7 +79,7 @@ keytool -import -trustcacerts -alias company-intermediate-ca \
 
 ### Step 3: Configure the Application
 
-Add SSL configuration to your **`application-local.properties`** file (also gitignored):
+Add SSL configuration to your **`application-remote.properties`** file (also gitignored):
 
 ```properties
 # AI Gateway authentication (existing config)
@@ -137,7 +137,7 @@ ERROR - Truststore file not found: /absolute/path/to/certs/company-truststore.jk
 **Cause:** The `trust-store-password` doesn't match the password used when creating the truststore.
 
 **Solution:**
-- Verify the password in `application-local.properties`
+- Verify the password in `application-remote.properties`
 - Recreate the truststore with the correct password
 
 ### Error: "Invalid keystore format"

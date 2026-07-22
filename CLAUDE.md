@@ -62,7 +62,7 @@ The app can also talk to a remote, OpenAI-compatible AI gateway that sits behind
 identity provider (Keycloak `client_credentials` grant) instead of the local ramalama server.
 This is **opt-in and gitignored** — the default committed configuration is unchanged.
 
-To enable it, copy `application-local.properties.example` to `application-local.properties`
+To enable it, copy `application-remote.properties.example` to `application-remote.properties`
 (gitignored) and fill in the gateway URL and credentials. Setting `gateway.auth.token-url` is
 what activates the machinery.
 
@@ -85,11 +85,11 @@ This replaced an earlier local-HTTP-proxy-based implementation — see
 
 1. **Copy example config**:
    ```bash
-   cp src/main/resources/application-local.properties.example \
-      src/main/resources/application-local.properties
+   cp src/main/resources/application-remote.properties.example \
+      src/main/resources/application-remote.properties
    ```
 
-2. **Fill in OAuth2 credentials** in `application-local.properties`:
+2. **Fill in OAuth2 credentials** in `application-remote.properties`:
    ```properties
    gateway.auth.token-url=https://your-keycloak.example.com/realms/your-realm/protocol/openid-connect/token
    gateway.auth.client-id=your-client-id
