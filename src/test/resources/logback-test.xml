@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Test-only logging overrides, picked up automatically by Spring Boot/logback instead of
+  logback-spring.xml/application.properties. Kept separate from application.properties so it
+  can't shadow required config (e.g. embabel.agent.platform.models.openai.*) on the test classpath.
+
+  TravelControllerTest intentionally simulates gateway failures (e.g. "gateway unreachable"),
+  which TravelController logs at ERROR with a full stack trace - expected, not a real failure.
+  Suppress it here so passing test runs stay readable.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <logger name="net.timafe.travel.TravelController" level="OFF"/>
+    <logger name="net.timafe.travel.gateway" level="WARN"/>
+    <logger name="org.springframework.security.oauth2.client" level="WARN"/>
+    <logger name="org.springframework.web.client.RestClient" level="WARN"/>
+    <logger name="org.springframework.http.client" level="WARN"/>
+</configuration>
