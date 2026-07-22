@@ -19,13 +19,44 @@
 LLM_MODEL ?= gemma4:e2b #  or e4b, from https://towardsdatascience.com/build-your-own-local-ai-coding-agent-with-gemma-4-and-opencode-2/
 LLM_PORT ?= 11434
 
+MOCK_OIDC_PORT ?= 9200
+MOCK_GATEWAY_PORT ?= 9300
+MOCK_TOKEN_TTL ?= 10
+MOCK_FIXED_DESTINATION ?= random
+MOCK_DIR := mocks
+
 .PHONY: help
 help:
 	@grep -E "^$$PFX[0-9a-zA-Z_-]+:.*?## .*$$" $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'; echo "";\
 
 .PHONY: run
-run: ## runs the spring-boot app
+run: ## [scenario 1, default] runs the app against local ramalama (localhost:11434)
+	@[ -f application-local.properties ] && echo "⚠️  ./application-local.properties exists and will override these defaults - see 'make run-remote'" || true
+	@lsof -tiTCP:8080 -sTCP:LISTEN >/dev/null 2>&1 && echo "⚠️  port 8080 is already in use - the app may fail to start; run 'make stop' first if a stale instance (e.g. from run-mock) is still running" || true
 	mvn spring-boot:run
+
+.PHONY: run-mock
+run-mock: mocks-start ## [scenario 2] runs the app against the mock OIDC + AI gateway (make mocks-start/-stop), config is committed (application-mock.properties)
+	mvn spring-boot:run -Dspring-boot.run.profiles=mock
+
+.PHONY: run-remote
+run-remote: ## [scenario 3] runs the app against the real remote AI gateway; requires ./application-local.properties (gitignored, not in version control)
+	@[ -f application-local.properties ] || { \
+		echo "❌ ./application-local.properties not found."; \
+		echo "   Copy src/main/resources/application-local.properties.example to ./application-local.properties (project root)"; \
+		echo "   and fill in the real gateway URL + OAuth2 credentials. See README.md."; \
+		exit 1; \
+	}
+	mvn spring-boot:run
+
+.PHONY: stop
+stop: ## kill any app instance (from run/run-mock/run-remote) still listening on port 8080
+	@PID=$$(lsof -tiTCP:8080 -sTCP:LISTEN 2>/dev/null); \
+	if [ -n "$$PID" ]; then \
+		kill $$PID && echo "stopped app on port 8080 (pid $$PID)"; \
+	else \
+		echo "nothing listening on port 8080"; \
+	fi
 
 .PHONY: test
 test: ## run tests
@@ -54,3 +85,35 @@ llm-test: ## run curl chat
 .PHONY: llm-models
 llm-models: ## show models by calling /v1/models endpoint
 	curl -s http://localhost:$(LLM_PORT)/v1/models |jq .
+
+.PHONY: mocks-start
+mocks-start: ## start mock OIDC (auth) + mock AI gateway in background if not already running, see mocks/README.md
+	@if lsof -nP -iTCP:$(MOCK_OIDC_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
+		echo "mock-oidc:    already running on $(MOCK_OIDC_PORT)"; \
+	else \
+		MOCK_TOKEN_TTL=$(MOCK_TOKEN_TTL) MOCK_OIDC_PORT=$(MOCK_OIDC_PORT) nohup python3 -u $(MOCK_DIR)/mock_oidc.py > $(MOCK_DIR)/.mock_oidc.log 2>&1 & echo $$! > $(MOCK_DIR)/.mock_oidc.pid; \
+		sleep 1; \
+		echo "mock-oidc:    http://localhost:$(MOCK_OIDC_PORT) (pid $$(cat $(MOCK_DIR)/.mock_oidc.pid), token ttl $(MOCK_TOKEN_TTL)s)"; \
+	fi
+	@if lsof -nP -iTCP:$(MOCK_GATEWAY_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
+		echo "mock-gateway: already running on $(MOCK_GATEWAY_PORT)"; \
+	else \
+		MOCK_GATEWAY_PORT=$(MOCK_GATEWAY_PORT) MOCK_FIXED_DESTINATION=$(MOCK_FIXED_DESTINATION) nohup python3 -u $(MOCK_DIR)/mock_gateway.py > $(MOCK_DIR)/.mock_gateway.log 2>&1 & echo $$! > $(MOCK_DIR)/.mock_gateway.pid; \
+		sleep 1; \
+		echo "mock-gateway: http://localhost:$(MOCK_GATEWAY_PORT) (pid $$(cat $(MOCK_DIR)/.mock_gateway.pid))"; \
+	fi
+
+.PHONY: mocks-stop
+mocks-stop: ## stop mock OIDC + AI gateway started via mocks-start
+	-@[ -f $(MOCK_DIR)/.mock_oidc.pid ] && kill $$(cat $(MOCK_DIR)/.mock_oidc.pid) 2>/dev/null; rm -f $(MOCK_DIR)/.mock_oidc.pid
+	-@[ -f $(MOCK_DIR)/.mock_gateway.pid ] && kill $$(cat $(MOCK_DIR)/.mock_gateway.pid) 2>/dev/null; rm -f $(MOCK_DIR)/.mock_gateway.pid
+	@echo "mocks stopped"
+
+.PHONY: mocks-status
+mocks-status: ## show whether mocks are running and on which ports
+	@lsof -nP -iTCP:$(MOCK_OIDC_PORT) -sTCP:LISTEN 2>/dev/null || echo "mock-oidc: not running on $(MOCK_OIDC_PORT)"
+	@lsof -nP -iTCP:$(MOCK_GATEWAY_PORT) -sTCP:LISTEN 2>/dev/null || echo "mock-gateway: not running on $(MOCK_GATEWAY_PORT)"
+
+.PHONY: mocks-logs molo
+mocks-logs molo: ## tail logs of both backgrounded mocks (started via mocks-start/run-mock), ctrl-c to stop watching (alias: molo)
+	tail -f $(MOCK_DIR)/.mock_oidc.log $(MOCK_DIR)/.mock_gateway.log

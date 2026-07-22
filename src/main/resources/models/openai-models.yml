@@ -225,6 +225,15 @@ models:
       usd_per1m_input_tokens: 0.10   # ESTIMATED
       usd_per1m_output_tokens: 0.40  # ESTIMATED
 
+  - name: "mock-model"
+    model_id: "mock-model"
+    display_name: "Mock AI Gateway (see mocks/)"
+    max_tokens: 2048
+    temperature: 0.7
+    pricing_model:
+      usd_per1m_input_tokens: 0.0
+      usd_per1m_output_tokens: 0.0
+
 # ========================================
 # EMBEDDING MODELS
 # ========================================

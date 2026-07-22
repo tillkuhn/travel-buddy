@@ -26,9 +26,16 @@ Thumbs.db
 *.env.local
 application-local.yml
 application-local.properties
+application-local.yml.sav
+application-local.properties.sav
 .claude
 .desloppify/
 scorecard.png
+
+# Mock services (runtime pid files, see mocks/README.md)
+mocks/*.pid
+__pycache__/
+*.pyc
 
 # Certificates and keystores (company-specific, must not be committed)
 certs/
@@ -41,3 +48,4 @@ certs/
 *.key
 !src/test/resources/**/*.jks
 !src/test/resources/**/*.p12
+gateway-proxy-removal.md

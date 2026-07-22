@@ -5,8 +5,17 @@ This document describes the technical challenges encountered when integrating th
 ## Table of Contents
 1. [Challenge: Spring AI Token Caching](#challenge-spring-ai-token-caching)
 2. [Challenge: SSL/TLS Certificate Trust](#challenge-ssltls-certificate-trust)
-3. [Solution: Local Proxy Architecture](#solution-local-proxy-architecture)
+3. [Solution: Local Proxy Architecture](#solution-local-proxy-architecture) *(superseded, see below)*
 4. [Implementation Details](#implementation-details)
+5. [Update: Removing the Proxy — Direct OAuth2 Client Wiring](#update-removing-the-proxy--direct-oauth2-client-wiring)
+
+> **2026 update**: the local proxy described below (`GatewayProxyController` /
+> `GatewayTokenService`) has been **removed**. It's kept here as historical record of the
+> investigation, but the current implementation uses standard Spring Security OAuth2 client
+> machinery instead — no proxy, no request forwarding. See
+> [Update: Removing the Proxy](#update-removing-the-proxy--direct-oauth2-client-wiring) at the
+> end of this document, and [gateway-proxy-removal.md](gateway-proxy-removal.md) for the original
+> design doc that triggered the change.
 
 ---
 
@@ -502,3 +511,155 @@ The combination of **JVM-level SSL configuration** and a **local HTTP proxy** so
 - ✅ Secure (credentials gitignored, HTTPS enforced)
 
 **Key takeaway**: When frameworks cache values you need to be dynamic, introduce a layer you control (the proxy) and let it handle the dynamism transparently.
+
+*(Note: this conclusion described the proxy-based solution, since superseded — see the next section.)*
+
+---
+
+## Update: Removing the Proxy — Direct OAuth2 Client Wiring
+
+**tl;dr**: Embabel/Spring AI can, in fact, use short-lived OAuth2 tokens with an OpenAI-compatible
+gateway *without* a local proxy. The trick is finding the one seam Embabel actually reads from at
+request time, rather than fighting its cached-`api-key` design head-on. This section documents
+that seam and replaces the proxy from the previous sections.
+
+### The missed seam
+
+Attempts 1–4 above all tried to inject a fresh token into the OpenAI `api-key`/`Authorization`
+mechanism *after* Embabel had already built its `OpenAiApi` client — that's why they all failed the
+same way (cached value, bean never invoked, request bypasses `@Primary`). What none of the earlier
+attempts checked was **what Embabel's `OpenAiModelsConfig` actually asks the Spring context for
+before building that client**:
+
+```kotlin
+// embabel-agent-openai-autoconfigure, OpenAiModelsConfig.kt
+@Qualifier("aiModelRestClientBuilder")
+restClientBuilder: ObjectProvider<RestClient.Builder>,
+```
+
+```kotlin
+// embabel-agent-openai, OpenAiCompatibleModelFactory.kt
+builder.restClientBuilder(
+    restClientBuilder.getIfAvailable {
+        RestClient.builder().requestFactory(/* plain, no auth */)
+    }
+)
+```
+
+Embabel looks up an `ObjectProvider<RestClient.Builder>` under the **exact qualifier
+`"aiModelRestClientBuilder"`**, and if a bean is published under that name, uses it *verbatim* to
+build the underlying `OpenAiApi` client. Publish that bean ourselves — with an OAuth2 bearer-token
+interceptor attached — and every outbound LLM HTTP call gets a freshly-minted token, no matter how
+short its lifetime, with zero proxying or property-source trickery. This resolves the "one
+uncertain link" flagged in `gateway-proxy-removal.md` (whether Embabel routes through the
+Spring-managed `RestClient.Builder` at all) — it does, just under a specific qualifier rather than
+the generic autoconfigured one Boot's `RestClientCustomizer` targets.
+
+### New architecture
+
+Standard Spring Security OAuth2 client machinery (`spring-boot-starter-oauth2-client`), wired
+directly to that qualified bean:
+
+```java
+@Bean
+ClientRegistrationRepository gatewayClientRegistrationRepository(GatewayProperties props) {
+    ClientRegistration registration = ClientRegistration.withRegistrationId("gateway")
+            .tokenUri(props.tokenUrl())
+            .clientId(props.clientId())
+            .clientSecret(props.clientSecret())
+            .scope(props.scope())
+            .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+            .build();
+    return new InMemoryClientRegistrationRepository(registration);
+}
+
+@Bean
+OAuth2AuthorizedClientManager gatewayAuthorizedClientManager(
+        ClientRegistrationRepository registrations, OAuth2AuthorizedClientService clientService) {
+    // Service-based, not request-scoped: Embabel's calls aren't guaranteed to run on a
+    // servlet-request thread.
+    var manager = new AuthorizedClientServiceOAuth2AuthorizedClientManager(registrations, clientService);
+    manager.setAuthorizedClientProvider(
+            OAuth2AuthorizedClientProviderBuilder.builder().clientCredentials().build());
+    return manager;
+}
+
+@Bean("aiModelRestClientBuilder")
+RestClient.Builder aiModelRestClientBuilder(OAuth2AuthorizedClientManager manager) {
+    var oauth = new OAuth2ClientHttpRequestInterceptor(manager);
+    oauth.setClientRegistrationIdResolver(request -> "gateway"); // fixed id
+    return RestClient.builder().requestInterceptor(oauth);
+}
+```
+
+`GatewayProxyController` and `GatewayTokenService` are deleted entirely. The `base-url` now points
+straight at the real gateway; there's no `localhost:8080/gateway-proxy` indirection.
+
+### Two gotchas discovered along the way
+
+1. **Client authentication method matters.** Spring Security defaults new `ClientRegistration`s to
+   `client_secret_basic` (credentials sent via HTTP Basic `Authorization` header on the token
+   request). Many simple/mock token endpoints — and some real ones — expect
+   `client_secret_post` (credentials as regular form fields in the POST body) instead. Getting
+   this wrong produces a confusing `401 Unauthorized` from the *token endpoint itself*, easily
+   mistaken for bad credentials. Fixed via
+   `.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)`.
+
+2. **Adding `spring-boot-starter-oauth2-client` silently locks down the whole app.** Its presence
+   on the classpath activates Spring Security's default autoconfiguration, which requires a login
+   for every request — turning the public travel-planner UI into a 302-to-`/login` redirect. This
+   has nothing to do with the AI gateway (that's outbound, server-to-server auth) but is an
+   unavoidable side effect of the dependency. Fixed with a small, unconditional
+   `GatewaySecurityConfig` that `permitAll()`s every request — the app has no user-facing
+   authentication of its own; the OAuth2 client is used purely as an outbound-auth library.
+
+### Why this is better than the proxy
+
+- **No extra network hop**: requests go straight from Embabel to the real gateway; the proxy added
+  a full extra HTTP round-trip (Embabel → proxy → gateway) for every LLM call.
+- **No forwarding logic to maintain**: no header stripping/copying, no manual `RestClient`
+  plumbing for the forward — Spring Security's interceptor handles authorization end-to-end.
+- **Standard, well-tested library code**: `OAuth2AuthorizedClientManager` and
+  `OAuth2ClientHttpRequestInterceptor` are maintained by the Spring Security team, not bespoke
+  application code.
+- **Same operational guarantees**: still fully in-process, still refreshes inline with the
+  request (no scheduled tasks/background threads), still framework-version-agnostic as long as
+  Embabel keeps honoring the `aiModelRestClientBuilder` qualifier.
+
+### Verified end-to-end against the mocks
+
+The dependency-free mock OIDC + mock AI gateway (`mocks/mock_oidc.py`, `mocks/mock_gateway.py`, see
+[mocks/README.md](mocks/README.md)) turned out to be just as valuable for validating the *removal*
+of the proxy as it was for building it in the first place — no real gateway, IdP, or network access
+needed, and a short configurable token TTL (`MOCK_TOKEN_TTL`) makes expiry/refresh observable in
+seconds instead of the real gateway's 5 minutes. `make run-mock` starts both mocks and the app
+against them in one step; this remains the easiest way to (re-)verify the token-refresh path after
+any future change to `GatewayAuthConfig` or an Embabel/Spring Security upgrade.
+
+Using `make run-mock` (`MOCK_TOKEN_TTL=10`s):
+
+1. Form submission → real round trip through OAuth2 `client_credentials` → mock OIDC → gateway →
+   randomized destination suggestion (proves it's a live call, not cached).
+2. Waited past the token TTL, submitted again → `mocks/.mock_oidc.log` showed a **second, distinct**
+   `issued token` line with a later `expires_at`, and a **different** randomized suggestion — proof
+   the refresh path works, not just that the app started successfully.
+
+This mirrors "Test 2" from this document's original testing section, just without a proxy in the
+request path.
+
+### Lessons learned (addendum)
+
+- **Read the framework's actual lookup code, not just its docs.** The fix here wasn't a new
+  Spring Security feature — `ObjectProvider.getIfAvailable` + a specific `@Qualifier` string had
+  been there in Embabel all along; Attempts 1–4 above never looked at *what Embabel asks the
+  context for*, only at *what Spring AI does with the value once built*.
+- **A generic `RestClientCustomizer` is not the same as a qualified bean lookup.** Boot's
+  autoconfigured `RestClient.Builder` (which `RestClientCustomizer` beans modify) is a different
+  bean than the one Embabel explicitly requests by qualifier — customizing the former does nothing
+  for Embabel unless the qualifier also happens to be published.
+- **New dependencies can have side effects unrelated to why you added them.** Adding
+  `oauth2-client` for outbound auth silently added inbound auth requirements too, via Spring
+  Security's autoconfiguration — always sanity-check the app's own public endpoints after adding a
+  security-adjacent starter.
+

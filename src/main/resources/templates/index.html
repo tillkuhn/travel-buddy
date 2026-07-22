@@ -185,10 +185,10 @@
             <div class="form-group">
                 <label for="region">Destination Region</label>
                 <select id="region" name="region" required>
-                    <option value="" disabled selected>Where in the world? ...</option>
+                    <option value="" disabled>Where in the world? ...</option>
                     <option value="Americas">&#127758; Americas</option>
                     <option value="Southeast Asia">&#127759; Southeast Asia</option>
-                    <option value="Europe">&#127757; Europe</option>
+                    <option value="Europe" selected>&#127757; Europe</option>
                     <option value="Africa">&#127757; Africa</option>
                     <option value="Australia">&#127758; Australia</option>
                 </select>
@@ -197,14 +197,15 @@
             <div class="form-group">
                 <label for="activities">Activities <span class="hint">(hold Ctrl / Cmd for multiple)</span></label>
                 <select id="activities" name="activities" multiple>
-                    <option th:each="activity : ${activities}" th:value="${activity}" th:text="${activity}"></option>
+                    <option th:each="activity, activityStat : ${activities}" th:value="${activity}" th:text="${activity}"
+                            th:selected="${activityStat.index == 0}"></option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="additionalWishes">Your Wishes</label>
                 <textarea id="additionalWishes" name="additionalWishes"
-                          placeholder="E.g. family-friendly, budget travel, off the beaten path, romantic getaway…"></textarea>
+                          placeholder="E.g. family-friendly, budget travel, off the beaten path, romantic getaway…">coastal</textarea>
             </div>
 
             <div class="divider"></div>
