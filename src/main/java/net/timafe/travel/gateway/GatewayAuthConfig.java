@@ -208,7 +208,8 @@ public class GatewayAuthConfig {
         public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
             String authHeader = request.getHeaders().getFirst("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String tokenPreview = authHeader.substring(0, Math.min(authHeader.length(), 30)) + "...";
+                String token = authHeader.substring("Bearer ".length());
+                String tokenPreview = TokenMasker.mask(token);
                 log.debug("🔑 AI gateway request to {} with OAuth2 bearer token: {}", request.getURI(), tokenPreview);
             } else {
                 log.debug("🔄 AI gateway request to {} (no bearer token found)", request.getURI());
