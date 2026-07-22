@@ -8,6 +8,7 @@ final class TokenMasker {
 
     private static final int PREFIX_LEN = 2;
     private static final int SUFFIX_LEN = 2;
+    private static final int MASK_LEN = 8;
 
     private TokenMasker() {
     }
@@ -21,7 +22,6 @@ final class TokenMasker {
         }
         String prefix = token.substring(0, PREFIX_LEN);
         String suffix = token.substring(token.length() - SUFFIX_LEN);
-        String stars = "*".repeat(token.length() - PREFIX_LEN - SUFFIX_LEN);
-        return prefix + stars + suffix;
+        return prefix + "*".repeat(MASK_LEN) + suffix;
     }
 }

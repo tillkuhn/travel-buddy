@@ -15,7 +15,7 @@ class TokenMaskerTest {
         assertThat(masked)
                 .startsWith("ey")
                 .endsWith("23")
-                .hasSize(token.length())
+                .hasSizeLessThan(token.length())
                 .doesNotContain(token.substring(2, token.length() - 2));
     }
 
