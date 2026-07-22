@@ -8,6 +8,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.client.AuthorizedClientServiceOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
@@ -20,6 +24,7 @@ import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.web.client.RestClient;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -102,12 +107,58 @@ public class GatewayAuthConfig {
         // guaranteed to run on a servlet-request thread, so there's no HttpServletRequest to key
         // the DefaultOAuth2AuthorizedClientManager's request-scoped lookup on.
         var manager = new AuthorizedClientServiceOAuth2AuthorizedClientManager(registrations, clientService);
-        manager.setAuthorizedClientProvider(
-                OAuth2AuthorizedClientProviderBuilder.builder()
-                        .clientCredentials() // refreshes ~60s before expiry (default clock skew)
-                        .build());
-        log.info("Gateway OAuth2 authorized client manager configured (client_credentials grant)");
-        return manager;
+        
+        var authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder.builder()
+                .clientCredentials() // refreshes ~60s before expiry (default clock skew)
+                .build();
+        
+        manager.setAuthorizedClientProvider(authorizedClientProvider);
+        
+        // Wrap the manager to add logging around token operations
+        var loggingManager = new LoggingOAuth2AuthorizedClientManager(manager);
+        
+        log.info("Gateway OAuth2 authorized client manager configured (client_credentials grant) with logging wrapper");
+        return loggingManager;
+    }
+
+    /**
+     * Wrapper around OAuth2AuthorizedClientManager that logs token acquisition and refresh events.
+     * This provides the debug visibility that was present in the old proxy solution.
+     */
+    private static class LoggingOAuth2AuthorizedClientManager implements OAuth2AuthorizedClientManager {
+        private static final Logger log = LoggerFactory.getLogger(LoggingOAuth2AuthorizedClientManager.class);
+        private final OAuth2AuthorizedClientManager delegate;
+        
+        public LoggingOAuth2AuthorizedClientManager(OAuth2AuthorizedClientManager delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public org.springframework.security.oauth2.client.OAuth2AuthorizedClient authorize(
+                org.springframework.security.oauth2.client.OAuth2AuthorizeRequest authorizeRequest) {
+            
+            String clientRegistrationId = authorizeRequest.getClientRegistrationId();
+            var existingClient = authorizeRequest.getAuthorizedClient();
+            
+            if (existingClient == null) {
+                log.info("🔐 Requesting NEW OAuth2 token for client registration: {}", clientRegistrationId);
+            } else {
+                var expiresAt = existingClient.getAccessToken().getExpiresAt();
+                log.debug("🔄 Authorizing request (existing token expires at: {})", expiresAt);
+            }
+            
+            var result = delegate.authorize(authorizeRequest);
+            
+            if (result != null && (existingClient == null || 
+                    !result.getAccessToken().getTokenValue().equals(existingClient.getAccessToken().getTokenValue()))) {
+                var expiresAt = result.getAccessToken().getExpiresAt();
+                log.info("✅ Obtained fresh OAuth2 token (expires at: {})", expiresAt);
+            } else if (result != null) {
+                log.debug("♻️  Reusing existing valid token");
+            }
+            
+            return result;
+        }
     }
 
     /**
@@ -122,8 +173,40 @@ public class GatewayAuthConfig {
     RestClient.Builder aiModelRestClientBuilder(OAuth2AuthorizedClientManager manager) {
         var oauth = new OAuth2ClientHttpRequestInterceptor(manager);
         oauth.setClientRegistrationIdResolver(request -> REGISTRATION_ID); // fixed id, no request-scoped attribute
-        log.info("Created 'aiModelRestClientBuilder' RestClient.Builder with OAuth2 bearer-token interceptor");
-        return RestClient.builder().requestInterceptor(oauth);
+        
+        // Add logging interceptor to provide visibility into token operations
+        ClientHttpRequestInterceptor loggingInterceptor = new GatewayLoggingInterceptor();
+        
+        log.info("Created 'aiModelRestClientBuilder' RestClient.Builder with OAuth2 bearer-token interceptor and logging");
+        return RestClient.builder()
+                .requestInterceptor(oauth)
+                .requestInterceptor(loggingInterceptor);
+    }
+
+    /**
+     * Logging interceptor that provides visibility into AI gateway requests and token usage.
+     * This compensates for the "less control" approach compared to the old proxy solution.
+     */
+    private static class GatewayLoggingInterceptor implements ClientHttpRequestInterceptor {
+        private static final Logger log = LoggerFactory.getLogger(GatewayLoggingInterceptor.class);
+
+        @Override
+        public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+            String authHeader = request.getHeaders().getFirst("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String tokenPreview = authHeader.substring(0, Math.min(authHeader.length(), 30)) + "...";
+                log.debug("🔑 AI gateway request to {} with OAuth2 bearer token: {}", request.getURI(), tokenPreview);
+            } else {
+                log.debug("🔄 AI gateway request to {} (no bearer token found)", request.getURI());
+            }
+            
+            long startTime = System.currentTimeMillis();
+            ClientHttpResponse response = execution.execute(request, body);
+            long duration = System.currentTimeMillis() - startTime;
+            
+            log.info("✅ AI gateway response: {} from {} in {}ms", response.getStatusCode(), request.getURI(), duration);
+            return response;
+        }
     }
 
     /**
