@@ -21,6 +21,9 @@ import org.springframework.security.oauth2.client.registration.InMemoryClientReg
 import org.springframework.security.oauth2.client.web.client.OAuth2ClientHttpRequestInterceptor;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.io.FileInputStream;
@@ -176,9 +179,20 @@ public class GatewayAuthConfig {
         
         // Add logging interceptor to provide visibility into token operations
         ClientHttpRequestInterceptor loggingInterceptor = new GatewayLoggingInterceptor();
-        
-        log.info("Created 'aiModelRestClientBuilder' RestClient.Builder with OAuth2 bearer-token interceptor and logging");
+
+        // Without explicit timeouts, an unreachable gateway (DNS failure, connection refused,
+        // firewall drop) falls back to JDK/OS defaults which can hang far longer than any
+        // reasonable user-facing request should - compounding with Embabel's own retry loop to
+        // leave the UI waiting for many minutes. Fail each individual HTTP attempt fast instead.
+        ClientHttpRequestFactory requestFactory = ClientHttpRequestFactoryBuilder.detect().build(
+                ClientHttpRequestFactorySettings.defaults()
+                        .withConnectTimeout(Duration.ofSeconds(5))
+                        .withReadTimeout(Duration.ofSeconds(30)));
+
+        log.info("Created 'aiModelRestClientBuilder' RestClient.Builder with OAuth2 bearer-token interceptor, " +
+                "logging and connect/read timeouts (5s/30s)");
         return RestClient.builder()
+                .requestFactory(requestFactory)
                 .requestInterceptor(oauth)
                 .requestInterceptor(loggingInterceptor);
     }

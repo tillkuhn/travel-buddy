@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Something Went Wrong</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background:
+                linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.65)),
+                url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&q=80') center/cover no-repeat fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 48px 44px;
+            max-width: 560px;
+            width: 100%;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 3rem;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: #1a1a2e;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        p.message {
+            color: #64748b;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(249,115,22,0.35);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">&#x26A0;&#xFE0F;</div>
+        <h1>We couldn't reach the travel assistant</h1>
+        <p class="message">
+            Something went wrong while generating your recommendation &mdash; the AI service may be
+            temporarily unavailable or unreachable. Please try again in a moment.
+        </p>
+        <a class="back-btn" href="/">&#8592; Back to search</a>
+    </div>
+</body>
+</html>
